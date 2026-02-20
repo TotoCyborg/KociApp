@@ -1,18 +1,39 @@
 //
 //  ContentView.swift
-//  KociApp
+//  KociApp_Grafica
 //
-//  Created by Salvatore Rita La Piana on 18/02/26.
+//  Created by elio koci on 20/02/26.
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
     
-
+    // colore verde
+    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+    
     var body: some View {
-        //navigationbar
+        TabView {
+            DashboardView()
+                .tabItem {
+                    Image(systemName: "square.grid.2x2")
+                    Text("Dashboard")
+                }
+            
+            DispensaView()
+                .tabItem {
+                    Image(systemName: "archivebox")
+                    Text("Dispensa")
+                }
+            
+            SpesaView()
+                .tabItem {
+                    Image(systemName: "list.bullet")
+                    Text("Lista")
+                }
+        }
+        .preferredColorScheme(.light)
+        .tint(verdeSalvia) // colore icona attiva
     }
 }
 
