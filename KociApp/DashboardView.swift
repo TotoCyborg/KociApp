@@ -154,26 +154,48 @@ struct DashboardView: View {
 
 // supporto
 struct DashboardCardView: View {
-    var nome: String
-    var dettaglio: String
-    var badgeText: String
+    var nome, dettaglio, badgeText: String
     var badgeColor: Color
-    let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
+    
+    // Riprendiamo il tuo verde per abbinarlo
+    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     
     var body: some View {
         HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: 14).fill(Color.gray.opacity(0.3)).frame(width: 56, height: 56)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(nome).font(.system(size: 17, weight: .bold)).foregroundColor(grigioScuroTesto)
-                Text(dettaglio).font(.system(size: 13, weight: .medium)).foregroundColor(.gray)
+            
+            // --- ECCO LA NUOVA ICONA ---
+            ZStack {
+                // Sfondo del quadratino (verde chiaro trasparente)
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(verdeSalvia.opacity(0.15))
+                
+                // L'icona al centro (verde salvia pieno)
+                Image(systemName: "fork.knife") // Prova anche "bag.fill" o "takeoutbox.fill"
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(verdeSalvia)
+            }
+            .frame(width: 56, height: 56)
+            // ---------------------------
+            
+            VStack(alignment: .leading) {
+                Text(nome).font(.system(size: 17, weight: .bold))
+                Text(dettaglio).font(.system(size: 13)).foregroundColor(.gray) // corretto .font
             }
             Spacer()
-            Text(badgeText).font(.system(size: 13, weight: .bold)).foregroundColor(.white).padding(.horizontal, 14).padding(.vertical, 8).background(badgeColor).cornerRadius(12)
+            
+            Text(badgeText)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(badgeColor)
+                .cornerRadius(12)
         }
-        .padding(14).background(Color.white).cornerRadius(24).shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+        .padding(14)
+        .background(Color.white)
+        .cornerRadius(24)
     }
 }
-
 #Preview {
     DashboardView()
 }

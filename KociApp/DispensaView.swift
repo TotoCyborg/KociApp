@@ -115,6 +115,8 @@ struct DispensaView: View {
 }
 
 // card alimenti
+import SwiftUI
+
 struct DispensaCardView: View {
     var nome: String
     var dettaglio: String
@@ -123,14 +125,24 @@ struct DispensaCardView: View {
     
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     let grigioIcona = Color(red: 0.35, green: 0.36, blue: 0.41)
+    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49) // Aggiunto per l'icona
     
     var body: some View {
         HStack(spacing: 16) {
             
-            // quadratino foto
-            RoundedRectangle(cornerRadius: 12)
-                .fill(grigioIcona)
-                .frame(width: 50, height: 50)
+            // NUOVO BLOCCO: Icona dispensa al posto del quadratino grigio
+            ZStack {
+                // Sfondo verde chiaro con la stessa curvatura di prima
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(verdeSalvia.opacity(0.15))
+                
+                // Simbolo nativo Apple
+                Image(systemName: "fork.knife")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(verdeSalvia)
+            }
+            .frame(width: 50, height: 50)
+            // -----------------------------------------------------------
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(nome)
