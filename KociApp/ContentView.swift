@@ -1,61 +1,58 @@
 //
 //  ContentView.swift
-//  KociApp
+//  KociApp_Grafica
 //
-//  Created by Salvatore Rita La Piana on 18/02/26.
+//  Created by elio koci on 20/02/26.
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    // @AppStorage ricorda sul telefono se l'utente ha già completato l'onboarding
+    @AppStorage("haVistoOnboarding") var haVistoOnboarding = false
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
+        if haVistoOnboarding {
+            // Main app with bottom navigation bar
+            MainTabView()
+        } else {
+            // Initial 3 explanation slides
+            OnboardingView(onboardingCompletato: $haVistoOnboarding)
         }
     }
+}
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+// Bottom tab bar navigation
+struct MainTabView: View {
+    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+    
+    var body: some View {
+        TabView {
+            // 1. Dashboard
+            DashboardView()
+                .tabItem {
+                    Image(systemName: "square.grid.2x2")
+                    Text("Dashboard")
+                }
+            
+            // 2. Pantry (previously Dispensa)
+            DispensaView()
+                .tabItem {
+                    Image(systemName: "archivebox")
+                    Text("Pantry")
+                }
+            
+            // 3. Shopping List (previously Lista)
+            SpesaView()
+                .tabItem {
+                    Image(systemName: "list.bullet")
+                    Text("List")
+                }
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+        .tint(verdeSalvia) // Colors the active icon in sage green
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
