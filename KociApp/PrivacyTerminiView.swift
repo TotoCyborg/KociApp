@@ -19,18 +19,19 @@ struct PrivacyTerminiView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     
-                    Text("Privacy & Termini")
+                    // Titolo tradotto: "Privacy & Terms"
+                    Text("Privacy & Terms")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(grigioScuroTesto)
                         .padding(.top, 20)
                     
-                    //testo legale esempio
+                    // Testo legale tradotto
                     VStack(alignment: .leading, spacing: 16) {
                         
-                        Text("1. Raccolta dei dati\nLa nostra app si impegna a proteggere la tua privacy. Raccogliamo solo i dati necessari per gestire la tua dispensa e la lista della spesa.\n\n2. Utilizzo dei dati\nI dati inseriti vengono salvati localmente per garantirti la massima sicurezza. Non vendiamo i tuoi dati a terzi.\n\n3. Trasparenza\nCi riserviamo il diritto di modificare queste condizioni in qualsiasi momento, avvisandoti in modo tempestivo.")
+                        Text("1. Data Collection\nOur app is committed to protecting your privacy. We only collect the data necessary to manage your pantry and shopping list.\n\n2. Data Usage\nThe data entered is saved locally to ensure maximum security. We do not sell your data to third parties.\n\n3. Transparency\nWe reserve the right to modify these conditions at any time, notifying you in a timely manner.")
                             .font(.system(size: 16))
                             .foregroundColor(grigioScuroTesto)
-                            .lineSpacing(4) // spazio
+                            .lineSpacing(4)
                     }
                     .padding()
                     .background(Color.white)

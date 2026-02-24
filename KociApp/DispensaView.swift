@@ -27,14 +27,14 @@ struct DispensaView: View {
     // variabile per ricerca
     @State private var testoRicerca: String = ""
     
-    // la lista di alimenti mock
+    // la lista di alimenti mock - TRADOTTI PER LO SCHERMO
     let tuttiGliArticoli = [
-        ArticoloDispensa(nome: "Petto di Pollo", dettaglio: "300g • Confezione aperta", scadenza: "Oggi", coloreBadge: Color(red: 0.71, green: 0.47, blue: 0.45)),
-        ArticoloDispensa(nome: "Latte Fresco", dettaglio: "1 Litro • Intero", scadenza: "2 gg", coloreBadge: Color(red: 0.72, green: 0.49, blue: 0.44)),
-        ArticoloDispensa(nome: "Yogurt Greco", dettaglio: "2 vasetti • Mirtilli", scadenza: "5 gg", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49)),
-        ArticoloDispensa(nome: "Zucchine Bio", dettaglio: "500g • Cassetto verdure", scadenza: "7 gg", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49)),
-        ArticoloDispensa(nome: "Uova Grandi", dettaglio: "4 rimaste • Allev. a terra", scadenza: "12 gg", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49)),
-        ArticoloDispensa(nome: "Parmigiano Reggiano", dettaglio: "300g • Pezzo intero", scadenza: "25 gg", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49))
+        ArticoloDispensa(nome: "Chicken Breast", dettaglio: "300g • Opened package", scadenza: "Today", coloreBadge: Color(red: 0.71, green: 0.47, blue: 0.45)),
+        ArticoloDispensa(nome: "Fresh Milk", dettaglio: "1 Liter • Whole", scadenza: "2 days", coloreBadge: Color(red: 0.72, green: 0.49, blue: 0.44)),
+        ArticoloDispensa(nome: "Greek Yogurt", dettaglio: "2 cups • Blueberry", scadenza: "5 days", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49)),
+        ArticoloDispensa(nome: "Organic Zucchini", dettaglio: "500g • Crisper drawer", scadenza: "7 days", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49)),
+        ArticoloDispensa(nome: "Large Eggs", dettaglio: "4 left • Cage-free", scadenza: "12 days", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49)),
+        ArticoloDispensa(nome: "Parmesan Cheese", dettaglio: "300g • Block", scadenza: "25 days", coloreBadge: Color(red: 0.48, green: 0.59, blue: 0.49))
     ]
     
     // match ricerca
@@ -42,7 +42,6 @@ struct DispensaView: View {
         if testoRicerca.isEmpty {
             return tuttiGliArticoli
         } else {
-            // no caps sensitive
             return tuttiGliArticoli.filter { $0.nome.lowercased().contains(testoRicerca.lowercased()) }
         }
     }
@@ -56,37 +55,37 @@ struct DispensaView: View {
                 // header
                 VStack(spacing: 16) {
                     
-                    // "dispensa" e +
+                    // Titolo tradotto: "Pantry"
                     HStack {
-                        Text("Dispensa")
+                        Text("Pantry")
                             .font(.system(size: 36, weight: .bold, design: .rounded))
                             .foregroundColor(grigioScuroTesto)
                             .padding(.top, 30)
-                                    .padding(.horizontal, 2)
+                            .padding(.horizontal, 2)
                         
                         Spacer()
                         
                         Button(action: {
-                            print("Aggiungi nuovo alimento")
+                            print("Add new item") // Messaggio console
                         }) {
                             Image(systemName: "plus")
                                 .font(.system(size: 24, weight: .semibold))
                                 .foregroundColor(grigioScuroTesto)
                                 .padding(.top, 30)
-                                        .padding(.horizontal, 2)
+                                .padding(.horizontal, 2)
                         }
                     }
                     
-                    // barra di ricerca
+                    // Barra di ricerca tradotta: "Search..."
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.gray)
                         
-                        TextField("Cerca...", text: $testoRicerca)
+                        TextField("Search...", text: $testoRicerca)
                             .foregroundColor(grigioScuroTesto)
                     }
                     .padding(12)
-                    .background(Color.gray.opacity(0.15)) // grigio chiaro semitrasparente
+                    .background(Color.gray.opacity(0.15))
                     .cornerRadius(12)
                 }
                 .padding(.horizontal, 24)
@@ -96,7 +95,6 @@ struct DispensaView: View {
                 // lista scroll
                 ScrollView {
                     VStack(spacing: 16) {
-                        // foreach per i prodotti
                         ForEach(articoliFiltrati) { articolo in
                             DispensaCardView(
                                 nome: articolo.nome,
@@ -107,7 +105,7 @@ struct DispensaView: View {
                         }
                     }
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 40) // spazio per la tab bar
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -115,8 +113,6 @@ struct DispensaView: View {
 }
 
 // card alimenti
-import SwiftUI
-
 struct DispensaCardView: View {
     var nome: String
     var dettaglio: String
@@ -124,25 +120,20 @@ struct DispensaCardView: View {
     var coloreBadge: Color
     
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
-    let grigioIcona = Color(red: 0.35, green: 0.36, blue: 0.41)
-    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49) // Aggiunto per l'icona
+    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     
     var body: some View {
         HStack(spacing: 16) {
             
-            // NUOVO BLOCCO: Icona dispensa al posto del quadratino grigio
             ZStack {
-                // Sfondo verde chiaro con la stessa curvatura di prima
                 RoundedRectangle(cornerRadius: 12)
                     .fill(verdeSalvia.opacity(0.15))
                 
-                // Simbolo nativo Apple
                 Image(systemName: "fork.knife")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(verdeSalvia)
             }
             .frame(width: 50, height: 50)
-            // -----------------------------------------------------------
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(nome)

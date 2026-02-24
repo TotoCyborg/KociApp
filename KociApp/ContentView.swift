@@ -13,18 +13,19 @@ struct ContentView: View {
     
     var body: some View {
         if haVistoOnboarding {
-            // se lo ha già visto, carica la tua app normale con la barra in basso
+            // Main app with bottom navigation bar
             MainTabView()
         } else {
-            // altrimenti, mostra le 3 slide di spiegazione iniziale
+            // Initial 3 explanation slides
             OnboardingView(onboardingCompletato: $haVistoOnboarding)
         }
     }
 }
 
-// contiene le 3 pagine principali
+// Bottom tab bar navigation
 struct MainTabView: View {
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+    
     var body: some View {
         TabView {
             // 1. Dashboard
@@ -34,21 +35,21 @@ struct MainTabView: View {
                     Text("Dashboard")
                 }
             
-            // 2. Dispensa
+            // 2. Pantry (previously Dispensa)
             DispensaView()
                 .tabItem {
                     Image(systemName: "archivebox")
-                    Text("Dispensa")
+                    Text("Pantry")
                 }
             
-            // 3. Lista della Spesa
+            // 3. Shopping List (previously Lista)
             SpesaView()
                 .tabItem {
                     Image(systemName: "list.bullet")
-                    Text("Lista")
+                    Text("List")
                 }
         }
-        .tint(verdeSalvia) // Colora di verde l'icona cliccata
+        .tint(verdeSalvia) // Colors the active icon in sage green
     }
 }
 

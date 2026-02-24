@@ -28,12 +28,12 @@ struct DashboardView: View {
     @State private var mostraSoloInScadenza = true
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
     
-    // esempio (mock data)
+    // esempio (mock data) - TRADOTTI PER LO SCHERMO
     let tuttiGliAlimenti = [
-        Alimento(nome: "Petto di Pollo", dettaglio: "300g • Confezione aperta", badgeText: "Oggi", badgeColor: Color(red: 0.71, green: 0.47, blue: 0.45), inScadenza: true),
-        Alimento(nome: "Latte Fresco", dettaglio: "1 Litro • Intero", badgeText: "2 gg", badgeColor: Color(red: 0.72, green: 0.49, blue: 0.44), inScadenza: true),
-        Alimento(nome: "Yogurt Greco", dettaglio: "2 vasetti • Mirtilli", badgeText: "5 gg", badgeColor: Color(red: 0.48, green: 0.59, blue: 0.49), inScadenza: false),
-        Alimento(nome: "Zucchine Bio", dettaglio: "500g • Cassetto verdure", badgeText: "7 gg", badgeColor: Color(red: 0.48, green: 0.59, blue: 0.49), inScadenza: false)
+        Alimento(nome: "Chicken Breast", dettaglio: "300g • Opened package", badgeText: "Today", badgeColor: Color(red: 0.71, green: 0.47, blue: 0.45), inScadenza: true),
+        Alimento(nome: "Fresh Milk", dettaglio: "1 Liter • Whole", badgeText: "2 days", badgeColor: Color(red: 0.72, green: 0.49, blue: 0.44), inScadenza: true),
+        Alimento(nome: "Greek Yogurt", dettaglio: "2 cups • Blueberry", badgeText: "5 days", badgeColor: Color(red: 0.48, green: 0.59, blue: 0.49), inScadenza: false),
+        Alimento(nome: "Organic Zucchini", dettaglio: "500g • Crisper drawer", badgeText: "7 days", badgeColor: Color(red: 0.48, green: 0.59, blue: 0.49), inScadenza: false)
     ]
     
     // filtro lista
@@ -54,22 +54,34 @@ struct DashboardView: View {
                     
                     // header fisso
                     HStack {
-                        Text(nomeUtente.isEmpty ? "Benvenuto!" : "Ciao \(nomeUtente)!")
+                        Text(nomeUtente.isEmpty ? "Welcome!" : "Hello \(nomeUtente)!")
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(grigioScuroTesto)
                         Spacer()
                         NavigationLink(destination: ImpostazioniView()) {
                             Circle().fill(terracottaChiaro).frame(width: 48, height: 48)
                                 .overlay(
-                                    Text(nomeUtente.isEmpty ? "?" : String(nomeUtente.prefix(1)).uppercased())
-                                        .foregroundColor(.white).bold()
+                                    // Usiamo un Group per gestire if/else dentro l'overlay
+                                    Group {
+                                        if nomeUtente.isEmpty {
+                                            // Se NON c'è il nome, mostra l'icona
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 20, weight: .bold))
+                                                .foregroundColor(.white)
+                                        } else {
+                                            // Se C'È il nome, mostra l'iniziale
+                                            Text(String(nomeUtente.prefix(1)).uppercased())
+                                                .font(.system(size: 20, weight: .bold))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
                                 )
                         }
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 30)
                     .padding(.bottom, 10)
-                    .background(colorPanna) // copertura elementi che scorrono
+                    .background(colorPanna)
                     
                     // scroll
                     ScrollView {
@@ -77,7 +89,7 @@ struct DashboardView: View {
                             
                             // gamification
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Sfida della Settimana")
+                                Text("Weekly Challenge")
                                     .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(grigioScuroTesto)
                                 
@@ -88,7 +100,7 @@ struct DashboardView: View {
                                     }
                                 }.frame(height: 8)
                                 
-                                Text("8 su 10 alimenti salvati")
+                                Text("8 out of 10 items saved")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.gray)
                                     .frame(maxWidth: .infinity, alignment: .center)
@@ -98,7 +110,7 @@ struct DashboardView: View {
                             
                             // pills
                             HStack(spacing: 12) {
-                                Text("In scadenza")
+                                Text("Expiring")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(mostraSoloInScadenza ? .white : verdeSalvia)
                                     .padding(.horizontal, 18).padding(.vertical, 10)
@@ -106,7 +118,7 @@ struct DashboardView: View {
                                     .cornerRadius(24)
                                     .onTapGesture { withAnimation { mostraSoloInScadenza = true } }
                                 
-                                Text("Tutto")
+                                Text("All")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(!mostraSoloInScadenza ? .white : verdeSalvia)
                                     .padding(.horizontal, 18).padding(.vertical, 10)
@@ -123,7 +135,7 @@ struct DashboardView: View {
                                     Circle().stroke(verdeSalvia, lineWidth: 28).frame(width: 200, height: 200)
                                     VStack(spacing: -2) {
                                         Text("\(alimentiMostrati.count)").font(.system(size: 54, weight: .bold, design: .rounded)).foregroundColor(verdeSalvia)
-                                        Text(mostraSoloInScadenza ? "Da Salvare" : "Totali").font(.system(size: 16, weight: .bold)).foregroundColor(verdeSalvia)
+                                        Text(mostraSoloInScadenza ? "To Save" : "Total").font(.system(size: 16, weight: .bold)).foregroundColor(verdeSalvia)
                                     }
                                 }
                                 Spacer()
@@ -131,7 +143,7 @@ struct DashboardView: View {
                             .padding(.vertical, 40)
                             
                             // titolo lista
-                            Text(mostraSoloInScadenza ? "In scadenza a breve" : "Tutti gli alimenti")
+                            Text(mostraSoloInScadenza ? "Expiring soon" : "All food items")
                                 .font(.system(size: 20, weight: .bold))
                                 .foregroundColor(grigioScuroTesto)
                                 .padding(.bottom, 16)
@@ -157,29 +169,24 @@ struct DashboardCardView: View {
     var nome, dettaglio, badgeText: String
     var badgeColor: Color
     
-    // Riprendiamo il tuo verde per abbinarlo
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     
     var body: some View {
         HStack(spacing: 16) {
             
-            // --- ECCO LA NUOVA ICONA ---
             ZStack {
-                // Sfondo del quadratino (verde chiaro trasparente)
                 RoundedRectangle(cornerRadius: 14)
                     .fill(verdeSalvia.opacity(0.15))
                 
-                // L'icona al centro (verde salvia pieno)
-                Image(systemName: "fork.knife") // Prova anche "bag.fill" o "takeoutbox.fill"
+                Image(systemName: "fork.knife")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(verdeSalvia)
             }
             .frame(width: 56, height: 56)
-            // ---------------------------
             
             VStack(alignment: .leading) {
                 Text(nome).font(.system(size: 17, weight: .bold))
-                Text(dettaglio).font(.system(size: 13)).foregroundColor(.gray) // corretto .font
+                Text(dettaglio).font(.system(size: 13)).foregroundColor(.gray)
             }
             Spacer()
             
@@ -196,6 +203,7 @@ struct DashboardCardView: View {
         .cornerRadius(24)
     }
 }
+
 #Preview {
     DashboardView()
 }

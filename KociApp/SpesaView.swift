@@ -7,42 +7,78 @@
 
 import SwiftUI
 
+// Modello dati (lasciamo i nomi in italiano come preferisci)
+struct ArticoloLista: Identifiable {
+    let id = UUID()
+    let nome: String
+    let quantita: String
+    var isPreso: Bool
+    var sottotitolo: String = ""
+}
+
 struct SpesaView: View {
-    //colori
+    // Colori
     let colorPanna = Color(red: 0.96, green: 0.95, blue: 0.92)
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     
+    // --- LOGICA DI STATO ---
+    @State private var testoNuovoArticolo: String = ""
+    @State private var listaArticoli: [ArticoloLista] = [
+        ArticoloLista(nome: "Fresh Milk", quantita: "x2", isPreso: false),
+        ArticoloLista(nome: "Organic Eggs (6pk)", quantita: "x1", isPreso: false),
+        ArticoloLista(nome: "Genovese Pesto", quantita: "x1", isPreso: false, sottotitolo: "Out of stock in pantry")
+    ]
+    
+    // Funzione per aggiungere l'articolo
+    func aggiungiArticolo() {
+        // Se il testo è vuoto, non fare nulla
+        guard !testoNuovoArticolo.isEmpty else { return }
+        
+        let nuovo = ArticoloLista(nome: testoNuovoArticolo, quantita: "x1", isPreso: false)
+        
+        withAnimation {
+            listaArticoli.insert(nuovo, at: 0) // Lo mette in cima
+            testoNuovoArticolo = "" // Pulisce il campo di testo
+        }
+    }
+
     var body: some View {
         ZStack {
-            // sfondo
             colorPanna.ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 0) {
                 
-                // titolo fisso
+                // Titolo
                 VStack(alignment: .leading) {
-                    Text("La tua lista della spesa")
+                    Text("Your shopping list")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(grigioScuroTesto)
-                        .padding(.top, 42) // Il tuo "pochissimo" più basso
+                        .padding(.top, 42)
                         .padding(.bottom, 15)
                 }
                 .padding(.horizontal, 24)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(colorPanna) // Serve a coprire gli elementi che salgono
+                .background(colorPanna)
                 
-                // scroll
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         
-                        // barra di inserimento
+                        // BARRA DI INSERIMENTO
                         HStack {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(verdeSalvia)
+                            Button(action: aggiungiArticolo) {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(verdeSalvia)
+                                    .font(.title3)
+                            }
                             
-                            Text("Cos'altro ti manca?")
-                                .foregroundColor(.gray)
+                            // TextField aggiornato con onSubmit per la tastiera
+                            TextField("What else do you need?", text: $testoNuovoArticolo)
+                                .foregroundColor(grigioScuroTesto)
+                                .submitLabel(.done) // CORRETTO: .done invece di .add
+                                .onSubmit {
+                                    aggiungiArticolo()
+                                }
                             
                             Spacer()
                         }
@@ -50,27 +86,29 @@ struct SpesaView: View {
                         .background(Color.white)
                         .cornerRadius(16)
                         
-                        // blocco bianco
+                        // LISTA ARTICOLI
                         VStack(spacing: 0) {
-                            SpesaRigaView(nome: "Latte Fresco", quantita: "x2", isPreso: false)
-                            Divider().padding(.leading, 50)
-                            
-                            SpesaRigaView(nome: "Uova Bio (6pz)", quantita: "x1", isPreso: false)
-                            Divider().padding(.leading, 50)
-                            
-                            SpesaRigaView(nome: "Pesto alla Genovese", sottotitolo: "Terminato in dispensa", quantita: "x1", isPreso: false)
-                            Divider().padding(.leading, 50)
-                            
-                            SpesaRigaView(nome: "Insalata in busta", quantita: "x1", isPreso: true)
+                            ForEach(listaArticoli) { articolo in
+                                SpesaRigaView(
+                                    nome: articolo.nome,
+                                    sottotitolo: articolo.sottotitolo,
+                                    quantita: articolo.quantita,
+                                    isPreso: articolo.isPreso
+                                )
+                                
+                                if articolo.id != listaArticoli.last?.id {
+                                    Divider().padding(.leading, 50)
+                                }
+                            }
                         }
                         .background(Color.white)
                         .cornerRadius(24)
                         
-                        // bottone aggiungi
+                        // Bottone finale
                         Button(action: {
-                            print("Aggiunta articoli in corso...")
+                            print("Saving to pantry...")
                         }) {
-                            Text("Aggiungi articoli in Dispensa")
+                            Text("Add items to Pantry")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -78,20 +116,20 @@ struct SpesaView: View {
                                 .background(verdeSalvia)
                                 .cornerRadius(16)
                         }
-                        .padding(.bottom, 40) // spazio
+                        .padding(.bottom, 40)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 5)
                 }
             }
-        
         }
     }
 }
 
+// Riga della spesa (Sposta isPreso in una variabile che la view può modificare)
 struct SpesaRigaView: View {
     var nome: String
-    var sottotitolo: String = ""
+    var sottotitolo: String
     var quantita: String
     @State var isPreso: Bool
     
@@ -100,7 +138,6 @@ struct SpesaRigaView: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // tasto verde check
             Button(action: {
                 withAnimation { isPreso.toggle() }
             }) {
@@ -109,7 +146,6 @@ struct SpesaRigaView: View {
                     .foregroundColor(isPreso ? verdeSalvia : .gray)
             }
             
-            // testi
             VStack(alignment: .leading, spacing: 4) {
                 Text(nome)
                     .font(.system(size: 16, weight: .semibold))
@@ -122,10 +158,8 @@ struct SpesaRigaView: View {
                         .foregroundColor(terracotta)
                 }
             }
-            
             Spacer()
             
-            // quantità
             Text(quantita)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(verdeSalvia)
@@ -137,7 +171,6 @@ struct SpesaRigaView: View {
         .padding(16)
     }
 }
-
 #Preview {
     SpesaView()
 }

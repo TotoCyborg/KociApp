@@ -22,35 +22,35 @@ struct ProfiloView: View {
             
             VStack(alignment: .leading, spacing: 24) {
                 
-                Text("Il mio profilo")
+                // Titolo tradotto: "My Profile"
+                Text("My Profile")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundColor(grigioScuroTesto)
                     .padding(.top, 20)
                 
-                // testo
+                // Form di inserimento
                 VStack(spacing: 16) {
                     
-                    // nome
+                    // Sezione Nome tradotta: "First Name"
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Nome")
+                        Text("First Name")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.gray)
                         
-                        TextField("Es. Marco", text: $nomeUtente)
+                        TextField("e.g. Marco", text: $nomeUtente)
                             .padding()
                             .background(Color.white)
                             .cornerRadius(12)
-                            // maiuscola automatica
                             .autocapitalization(.words)
                     }
                     
-                    // cognome
+                    // Sezione Cognome tradotta: "Last Name"
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Cognome")
+                        Text("Last Name")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.gray)
                         
-                        TextField("Es. Rossi", text: $cognomeUtente)
+                        TextField("e.g. Rossi", text: $cognomeUtente)
                             .padding()
                             .background(Color.white)
                             .cornerRadius(12)
@@ -58,7 +58,7 @@ struct ProfiloView: View {
                     }
                 }
                 
-                Spacer() // in alto
+                Spacer()
             }
             .padding(.horizontal, 24)
         }

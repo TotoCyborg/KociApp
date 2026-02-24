@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ImpostazioniView: View {
+    // Brand Colors
     let colorPanna = Color(red: 0.96, green: 0.95, blue: 0.92)
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     let terracotta = Color(red: 0.72, green: 0.49, blue: 0.44)
@@ -16,7 +17,7 @@ struct ImpostazioniView: View {
     
     @State private var notificheAttive = true
     
-    // nome in memoria
+    // User Data
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
     
     var body: some View {
@@ -25,47 +26,56 @@ struct ImpostazioniView: View {
             
             VStack(alignment: .leading, spacing: 24) {
                 
-                Text("Impostazioni")
+                // Header Title
+                Text("Settings")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundColor(grigioScuroTesto)
                     .padding(.top, 15)
                     .padding(.horizontal, 24)
                 
-                // avatar
-                VStack(spacing: 8) {
-                    Circle()
-                        .fill(terracottaChiaro)
-                        .frame(width: 80, height: 80) // Avatar più grande!
-                        .padding(.top, 10)
-                        .overlay(
-                            Text(nomeUtente.isEmpty ? "?" : String(nomeUtente.prefix(1)).uppercased())
-                                .font(.system(size: 36, weight: .bold))
+                // --- AVATAR SECTION (FIXED CENTERED) ---
+                VStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(terracottaChiaro)
+                            .frame(width: 80, height: 80)
+                        
+                        if nomeUtente.isEmpty {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 38)) // Size adjusted for balance
                                 .foregroundColor(.white)
-                                .padding(.top, 14)
-                        )
+                                // Rimosso il padding che decentrava l'icona
+                        } else {
+                            Text(String(nomeUtente.prefix(1)).uppercased())
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding(.top, 10)
                     
-                    Text(nomeUtente.isEmpty ? "Nuovo Utente" : nomeUtente)
+                    Text(nomeUtente.isEmpty ? "New User" : nomeUtente)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(grigioScuroTesto)
                 }
-                .frame(maxWidth: .infinity) // avatar al centro
+                .frame(maxWidth: .infinity)
                 .padding(.bottom, 16)
                 
-                // menu
+                // Settings Menu
                 VStack(spacing: 12) {
                     
                     NavigationLink(destination: ProfiloView()) {
-                        ImpostazioniRigaView(titolo: "Il mio profilo")
+                        ImpostazioniRigaView(titolo: "My Profile")
                     }
                     .buttonStyle(PlainButtonStyle())
                     
                     NavigationLink(destination: PrivacyTerminiView()) {
-                        ImpostazioniRigaView(titolo: "Privacy & Termini")
+                        ImpostazioniRigaView(titolo: "Privacy & Terms")
                     }
                     .buttonStyle(PlainButtonStyle())
                     
+                    // Notifications Toggle
                     HStack {
-                        Text("Notifiche Scadenze")
+                        Text("Expiration Notifications")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(grigioScuroTesto)
                         Spacer()
@@ -81,12 +91,13 @@ struct ImpostazioniView: View {
                 
                 Spacer()
                 
+                // Logout Action
                 HStack {
                     Spacer()
                     Button(action: {
-                        print("Eseguo il logout...")
+                        print("Logging out...")
                     }) {
-                        Text("Esci dall'Account")
+                        Text("Log Out")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(terracotta)
                     }
@@ -98,6 +109,7 @@ struct ImpostazioniView: View {
     }
 }
 
+// Support View for Menu Rows
 struct ImpostazioniRigaView: View {
     var titolo: String
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
@@ -120,5 +132,7 @@ struct ImpostazioniRigaView: View {
 }
 
 #Preview {
-    ImpostazioniView()
+    NavigationStack {
+        ImpostazioniView()
+    }
 }
