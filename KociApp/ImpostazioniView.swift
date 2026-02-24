@@ -17,8 +17,9 @@ struct ImpostazioniView: View {
     
     @State private var notificheAttive = true
     
-    // User Data
+    // User Data & App State
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
+    @AppStorage("haVistoOnboarding") private var haVistoOnboarding = true // Necessario per il reset
     
     var body: some View {
         ZStack {
@@ -42,9 +43,8 @@ struct ImpostazioniView: View {
                         
                         if nomeUtente.isEmpty {
                             Image(systemName: "person.fill")
-                                .font(.system(size: 38)) // Size adjusted for balance
+                                .font(.system(size: 38))
                                 .foregroundColor(.white)
-                                // Rimosso il padding che decentrava l'icona
                         } else {
                             Text(String(nomeUtente.prefix(1)).uppercased())
                                 .font(.system(size: 36, weight: .bold, design: .rounded))
@@ -91,15 +91,17 @@ struct ImpostazioniView: View {
                 
                 Spacer()
                 
-                // Logout Action
+                // Reset App Action
                 HStack {
                     Spacer()
                     Button(action: {
-                        print("Logging out...")
+                        // Resetta i dati per far ripartire l'onboarding
+                        nomeUtente = ""
+                        haVistoOnboarding = false
                     }) {
-                        Text("Log Out")
+                        Text("Reset App Data")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(terracotta)
+                            .foregroundColor(terracotta) // Colore d'allerta
                     }
                     Spacer()
                 }
