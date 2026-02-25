@@ -26,6 +26,9 @@ struct KociAppApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    NotificationManager.shared.richiediPermesso()
+                }
         }
         .modelContainer(sharedModelContainer)
     }

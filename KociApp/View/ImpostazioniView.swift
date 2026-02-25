@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct ImpostazioniView: View {
+    
+    // 🚀 La variabile collegata al telefono
+        @AppStorage("impostazione_scadenze") private var avvisoScadenze = true
+    
     // Brand Colors
     let colorPanna = Color(red: 0.96, green: 0.95, blue: 0.92)
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
@@ -15,7 +19,7 @@ struct ImpostazioniView: View {
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     let terracottaChiaro = Color(red: 0.73, green: 0.55, blue: 0.49)
     
-    @State private var notificheAttive = true
+    //@State private var notificheAttive = true
     
     // User Data
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
@@ -79,7 +83,7 @@ struct ImpostazioniView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(grigioScuroTesto)
                         Spacer()
-                        Toggle("", isOn: $notificheAttive)
+                        Toggle("", isOn: $avvisoScadenze) // 🚀 Ora è collegato alla memoria del telefono! //$notificheAttive)
                             .labelsHidden()
                             .tint(verdeSalvia)
                     }
