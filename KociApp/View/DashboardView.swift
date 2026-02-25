@@ -6,42 +6,28 @@
 //
 import SwiftUI
 
-// dati
-// definizione alimento
-struct Alimento: Identifiable {
-    let id = UUID()
-    let nome: String
-    let dettaglio: String
-    let badgeText: String
-    let badgeColor: Color
-    let inScadenza: Bool
-}
-
 struct DashboardView: View {
     // colori
     let colorPanna = Color(red: 0.96, green: 0.95, blue: 0.92)
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     let terracottaChiaro = Color(red: 0.73, green: 0.55, blue: 0.49)
-    let rossoOggi = Color(red: 0.71, green: 0.47, blue: 0.45) // #B67774
+    let rossoOggi = Color(red: 0.71, green: 0.47, blue: 0.45)
     
     @State private var mostraSoloInScadenza = true
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
     
-    // esempio (mock data) - TRADOTTI PER LO SCHERMO
-    let tuttiGliAlimenti = [
-        Alimento(nome: "Chicken Breast", dettaglio: "300g • Opened package", badgeText: "Today", badgeColor: Color(red: 0.71, green: 0.47, blue: 0.45), inScadenza: true),
-        Alimento(nome: "Fresh Milk", dettaglio: "1 Liter • Whole", badgeText: "2 days", badgeColor: Color(red: 0.72, green: 0.49, blue: 0.44), inScadenza: true),
-        Alimento(nome: "Greek Yogurt", dettaglio: "2 cups • Blueberry", badgeText: "5 days", badgeColor: Color(red: 0.48, green: 0.59, blue: 0.49), inScadenza: false),
-        Alimento(nome: "Organic Zucchini", dettaglio: "500g • Crisper drawer", badgeText: "7 days", badgeColor: Color(red: 0.48, green: 0.59, blue: 0.49), inScadenza: false)
-    ]
+    // 1. RIMOSSI I MOCK DATA E AGGIUNTO IL COLLEGAMENTO AI DATI REALI
+    @State private var scannedItems: [ScannedItem] = []
     
-    // filtro lista
-    var alimentiMostrati: [Alimento] {
-        if mostraSoloInScadenza == true {
-            return tuttiGliAlimenti.filter { alimento in alimento.inScadenza == true }
+    // 2. AGGIORNATO IL FILTRO PER LEGGERE GLI SCANNED ITEMS
+    var alimentiMostrati: [ScannedItem] {
+        if mostraSoloInScadenza {
+            // TODO: Qui andrà inserito il filtro del tuo collega per la data di scadenza.
+            // Per ora mostriamo tutto, così l'app non si rompe.
+            return scannedItems
         } else {
-            return tuttiGliAlimenti
+            return scannedItems
         }
     }
 
@@ -58,18 +44,17 @@ struct DashboardView: View {
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(grigioScuroTesto)
                         Spacer()
-                        NavigationLink(destination: ImpostazioniView()) {
+                        
+                        // NOTA: Assicurati di avere una "ImpostazioniView", altrimenti darà errore.
+                        NavigationLink(destination: Text("Impostazioni (In arrivo)")) {
                             Circle().fill(terracottaChiaro).frame(width: 48, height: 48)
                                 .overlay(
-                                    // Usiamo un Group per gestire if/else dentro l'overlay
                                     Group {
                                         if nomeUtente.isEmpty {
-                                            // Se NON c'è il nome, mostra l'icona
                                             Image(systemName: "person.fill")
                                                 .font(.system(size: 20, weight: .bold))
                                                 .foregroundColor(.white)
                                         } else {
-                                            // Se C'È il nome, mostra l'iniziale
                                             Text(String(nomeUtente.prefix(1)).uppercased())
                                                 .font(.system(size: 20, weight: .bold))
                                                 .foregroundColor(.white)
@@ -100,6 +85,7 @@ struct DashboardView: View {
                                     }
                                 }.frame(height: 8)
                                 
+                                // TODO: Potremo rendere questo numero dinamico in seguito!
                                 Text("8 out of 10 items saved")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.gray)
@@ -134,8 +120,13 @@ struct DashboardView: View {
                                 ZStack {
                                     Circle().stroke(verdeSalvia, lineWidth: 28).frame(width: 200, height: 200)
                                     VStack(spacing: -2) {
-                                        Text("\(alimentiMostrati.count)").font(.system(size: 54, weight: .bold, design: .rounded)).foregroundColor(verdeSalvia)
-                                        Text(mostraSoloInScadenza ? "To Save" : "Total").font(.system(size: 16, weight: .bold)).foregroundColor(verdeSalvia)
+                                        // 3. IL CONTATORE ORA LEGGE I DATI REALI
+                                        Text("\(alimentiMostrati.count)")
+                                            .font(.system(size: 54, weight: .bold, design: .rounded))
+                                            .foregroundColor(verdeSalvia)
+                                        Text(mostraSoloInScadenza ? "To Save" : "Total")
+                                            .font(.system(size: 16, weight: .bold))
+                                            .foregroundColor(verdeSalvia)
                                     }
                                 }
                                 Spacer()
@@ -150,60 +141,86 @@ struct DashboardView: View {
                             
                             // card
                             VStack(spacing: 12) {
-                                ForEach(alimentiMostrati) { alimento in
-                                    DashboardCardView(nome: alimento.nome, dettaglio: alimento.dettaglio, badgeText: alimento.badgeText, badgeColor: alimento.badgeColor)
+                                // 4. ESTRAIAMO I DATI DAGLI SCANNED ITEMS
+                                ForEach(alimentiMostrati) { articolo in
+                                    DashboardCardView(
+                                        nome: articolo.isLoading ? "Caricamento..." : (articolo.product?.productName ?? "Sconosciuto"),
+                                        dettaglio: articolo.isLoading ? "Attendere prego" : "\(articolo.quantity) pz • \(articolo.product?.brands ?? "Marca ignota")",
+                                        badgeText: "In Dispensa", // Temporaneo fino al merge del collega
+                                        badgeColor: verdeSalvia // Temporaneo fino al merge del collega
+                                    )
                                 }
                             }
                         }
                         .padding(.horizontal, 24)
                         .padding(.bottom, 40)
                     }
+                    .scrollIndicators(.hidden) // Opzionale: nasconde la barra di scorrimento laterale
                 }
+            }
+            // 5. CARICHIAMO I DATI QUANDO LA SCHERMATA APPARE
+            .onAppear {
+                scannedItems = DataManager.loadItems()
             }
         }
     }
 }
 
 // supporto
+// supporto
 struct DashboardCardView: View {
     var nome, dettaglio, badgeText: String
     var badgeColor: Color
     
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+    let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     
     var body: some View {
         HStack(spacing: 16) {
             
+            // Icona (Allineata alle dimensioni esatte della Dispensa: 50x50)
             ZStack {
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(verdeSalvia.opacity(0.15))
                 
                 Image(systemName: "fork.knife")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(verdeSalvia)
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 50, height: 50)
             
-            VStack(alignment: .leading) {
-                Text(nome).font(.system(size: 17, weight: .bold))
-                Text(dettaglio).font(.system(size: 13)).foregroundColor(.gray)
+            // Testi
+            VStack(alignment: .leading, spacing: 4) {
+                Text(nome)
+                    .font(.system(size: 16, weight: .bold)) // Font a 16 come in Dispensa
+                    .foregroundColor(grigioScuroTesto)
+                    .lineLimit(1)
+                
+                Text(dettaglio)
+                    .font(.system(size: 13, weight: .medium)) // Aggiunto weight .medium
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
             }
+            
             Spacer()
             
-            Text(badgeText)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(badgeColor)
-                .cornerRadius(12)
+            // Badge Scadenza ESATTAMENTE identico alla Dispensa
+            VStack(alignment: .trailing) {
+                Text(badgeText)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(badgeColor)
+                    .cornerRadius(12)
+            }
         }
-        .padding(14)
+        .padding() // Usa il padding standard come in Dispensa
         .background(Color.white)
-        .cornerRadius(24)
+        .cornerRadius(20) // Corner radius a 20 anziché 24
+        .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
     }
 }
-
 #Preview {
     DashboardView()
 }

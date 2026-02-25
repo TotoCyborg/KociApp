@@ -12,19 +12,35 @@ struct ContentView: View {
     @AppStorage("haVistoOnboarding") var haVistoOnboarding = false
     
     var body: some View {
-        if haVistoOnboarding {
-            // Main app with bottom navigation bar
-            MainTabView()
-        } else {
-            // Initial 3 explanation slides
-            OnboardingView(onboardingCompletato: $haVistoOnboarding)
+        // Raggruppiamo la logica di navigazione per applicare il tema chiaro a TUTTA l'app
+        Group {
+            if haVistoOnboarding {
+                // Main app with bottom navigation bar
+                MainTabView()
+            } else {
+                // Initial 3 explanation slides
+                OnboardingView(onboardingCompletato: $haVistoOnboarding)
+            }
         }
+        // LA MAGIA: Forza l'app a rimanere sempre e solo in Modalità Chiara
+        .preferredColorScheme(.light)
     }
 }
 
 // Bottom tab bar navigation
 struct MainTabView: View {
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+    
+    // Inizializzatore per forzare l'aspetto della TabBar (sempre bianca e opaca)
+    init() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor.white // Forza il bianco
+        
+        // Applica l'aspetto fisso sia quando sei fermo, sia quando scorri una lista
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
     
     var body: some View {
         TabView {
