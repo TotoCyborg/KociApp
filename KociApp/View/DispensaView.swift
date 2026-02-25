@@ -2,9 +2,8 @@
 //  DispensaView.swift
 //  KociApp_Grafica
 //
-//  Created by elio koci on 20/02/26.
+//  Created by Toto La Piana on 25/02/26.
 //
-/* view di elio*/
 
 import SwiftUI
 
