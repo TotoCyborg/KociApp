@@ -56,7 +56,6 @@ struct DispensaView: View {
                         Spacer()
                         
                         Button(action: {
-                            // Azione che apre lo scanner
                             isScannerShowing = true
                         }) {
                             Image(systemName: "plus")
@@ -83,41 +82,64 @@ struct DispensaView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 16)
                 
-                // lista scroll
-                List {
-                    ForEach(articoliFiltrati) { articolo in
-                        DispensaCardView(
-                            nome: articolo.isLoading ? "Ricerca in corso..." : (articolo.product?.productName ?? "Sconosciuto"),
-                            dettaglio: articolo.isLoading ? "Attendere prego" : "\(articolo.product?.brands ?? "Marca ignota")",
-                            scadenza: "In Dispensa",
-                            coloreBadge: verdeSalvia,
-                            quantita: articolo.quantity, // Passiamo la quantità reale
-                            aumentaQuantita: {
-                                // Trova l'indice corretto, aumenta e salva
-                                if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
-                                    withAnimation { scannedItems[index].quantity += 1 }
-                                    DataManager.saveItems(scannedItems)
-                                }
-                            },
-                            diminuisciQuantita: {
-                                // Trova l'indice, diminuisci (se > 1) e salva
-                                if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
-                                    if scannedItems[index].quantity > 1 {
-                                        withAnimation { scannedItems[index].quantity -= 1 }
+                // STATI VUOTI O LISTA
+                // STATI VUOTI O LISTA
+                    if articoliFiltrati.isEmpty {
+                        Spacer()
+                        if testoRicerca.isEmpty {
+                            // 1. Dispensa totalmente vuota (Inglese)
+                            ContentUnavailableView(
+                                "Empty Pantry",
+                                systemImage: "carrot",
+                                description: Text("Press the + button to scan your first product.")
+                            )
+                            .foregroundStyle(verdeSalvia)
+                        } else {
+                            // 2. Ricerca senza risultati (Inglese)
+                            ContentUnavailableView(
+                                "No Results",
+                                systemImage: "magnifyingglass",
+                                description: Text("We couldn't find anything for \"\(testoRicerca)\".")
+                            )
+                            .foregroundStyle(verdeSalvia)
+                        }
+                        Spacer()
+                    } else {
+                    // lista scroll
+                    List {
+                        ForEach(articoliFiltrati) { articolo in
+                            DispensaCardView(
+                                nome: articolo.isLoading ? "Ricerca in corso..." : (articolo.product?.productName ?? "Sconosciuto"),
+                                dettaglio: articolo.isLoading ? "Attendere prego" : "\(articolo.product?.brands ?? "Marca ignota")",
+                                scadenza: "In Dispensa",
+                                coloreBadge: verdeSalvia,
+                                quantita: articolo.quantity,
+                                aumentaQuantita: {
+                                    if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
+                                        withAnimation { scannedItems[index].quantity += 1 }
                                         DataManager.saveItems(scannedItems)
                                     }
+                                },
+                                diminuisciQuantita: {
+                                    if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
+                                        if scannedItems[index].quantity > 1 {
+                                            withAnimation { scannedItems[index].quantity -= 1 }
+                                            DataManager.saveItems(scannedItems)
+                                        }
+                                    }
                                 }
-                            }
-                        )
-                        .listRowInsets(EdgeInsets(top: 8, leading: 24, bottom: 8, trailing: 24))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
+                            )
+                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                        }
+                        .onDelete(perform: deleteItems)
                     }
-                    .onDelete(perform: deleteItems)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .padding(.bottom, 20)
             }
         }
         .onAppear {
@@ -133,50 +155,46 @@ struct DispensaView: View {
     }
     
     // MARK: - MOTORE SCANNER E RETE
-    // MARK: - MOTORE SCANNER E RETE
-        func addProduct(code: String) {
-            // 1. BLOCCO MULTI-SCAN: Se lo scanner si sta già chiudendo, ignora le altre letture
-            guard isScannerShowing else { return }
-            
-            // 2. Chiudiamo logicamente lo scanner all'istante per bloccare i frame successivi
-            isScannerShowing = false
-            
-            // Se esiste già, aumentiamo la quantità
-            if let existingIndex = scannedItems.firstIndex(where: { $0.barcode == code }) {
-                withAnimation { scannedItems[existingIndex].quantity += 1 }
-                DataManager.saveItems(scannedItems)
-                return
-            }
-            
-            // Creiamo l'oggetto "in attesa"
-            let newItem = ScannedItem(barcode: code, product: nil, isLoading: true)
-            withAnimation { scannedItems.insert(newItem, at: 0) }
+    func addProduct(code: String) {
+        guard isScannerShowing else { return }
+        isScannerShowing = false
+        
+        if let existingIndex = scannedItems.firstIndex(where: { $0.barcode == code }) {
+            withAnimation { scannedItems[existingIndex].quantity += 1 }
             DataManager.saveItems(scannedItems)
-            
-            // Lanciamo il task asincrono
-            Task {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                do {
-                    let foundProduct = try await FoodAPI.getProduct(barcode: code)
-                    if let index = scannedItems.firstIndex(where: { $0.id == newItem.id }) {
-                        withAnimation {
-                            scannedItems[index].product = foundProduct
-                            scannedItems[index].isLoading = false
-                        }
-                        DataManager.saveItems(scannedItems)
+            return
+        }
+        
+        let newItem = ScannedItem(barcode: code, product: nil, isLoading: true)
+        withAnimation { scannedItems.insert(newItem, at: 0) }
+        DataManager.saveItems(scannedItems)
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            do {
+                let foundProduct = try await FoodAPI.getProduct(barcode: code)
+                if let index = scannedItems.firstIndex(where: { $0.id == newItem.id }) {
+                    withAnimation {
+                        scannedItems[index].product = foundProduct
+                        scannedItems[index].isLoading = false
                     }
-                } catch {
-                    if let index = scannedItems.firstIndex(where: { $0.id == newItem.id }) {
-                        withAnimation { scannedItems[index].isLoading = false }
-                        DataManager.saveItems(scannedItems)
-                    }
+                    DataManager.saveItems(scannedItems)
+                }
+            } catch {
+                if let index = scannedItems.firstIndex(where: { $0.id == newItem.id }) {
+                    withAnimation { scannedItems[index].isLoading = false }
+                    DataManager.saveItems(scannedItems)
                 }
             }
         }
+    }
     
-    // MARK: - FUNZIONE ELIMINAZIONE
+    // MARK: - FUNZIONE ELIMINAZIONE MIGLIORATA
     func deleteItems(at offsets: IndexSet) {
-        scannedItems.remove(atOffsets: offsets)
+        let idsToDelete = offsets.map { articoliFiltrati[$0].id }
+        scannedItems.removeAll(where: { item in
+            idsToDelete.contains(item.id)
+        })
         DataManager.saveItems(scannedItems)
     }
 }
@@ -188,7 +206,6 @@ struct DispensaCardView: View {
     var scadenza: String
     var coloreBadge: Color
     
-    // Nuove variabili per la gestione della quantità
     var quantita: Int
     var aumentaQuantita: () -> Void
     var diminuisciQuantita: () -> Void
@@ -213,7 +230,7 @@ struct DispensaCardView: View {
                 Text(nome)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(grigioScuroTesto)
-                    .lineLimit(1) // Evita che nomi troppo lunghi sballino l'interfaccia
+                    .lineLimit(1)
                 
                 Text(dettaglio)
                     .font(.system(size: 13, weight: .medium))
@@ -223,9 +240,7 @@ struct DispensaCardView: View {
             
             Spacer()
             
-            // VStack per allineare a destra Badge e Quantità
             VStack(alignment: .trailing, spacing: 12) {
-                // badge scadenza
                 Text(scadenza)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
@@ -234,14 +249,13 @@ struct DispensaCardView: View {
                     .background(coloreBadge)
                     .cornerRadius(12)
                 
-                // Stepper Quantità
                 HStack(spacing: 8) {
                     Button(action: diminuisciQuantita) {
                         Image(systemName: "minus.square.fill")
                             .font(.title3)
                             .foregroundStyle(quantita > 1 ? verdeSalvia : .gray.opacity(0.3))
                     }
-                    .buttonStyle(.borderless) // <-- Fondamentale dentro una List
+                    .buttonStyle(.borderless)
                     
                     Text("\(quantita)")
                         .font(.headline)
@@ -254,7 +268,7 @@ struct DispensaCardView: View {
                             .font(.title3)
                             .foregroundStyle(verdeSalvia)
                     }
-                    .buttonStyle(.borderless) // <-- Fondamentale dentro una List
+                    .buttonStyle(.borderless)
                 }
                 .padding(.vertical, 4)
                 .padding(.horizontal, 6)
