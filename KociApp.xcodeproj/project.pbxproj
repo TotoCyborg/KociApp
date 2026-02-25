@@ -11,11 +11,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0C65502A2F4E149B004752EC /* Services */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Services;
-			sourceTree = "<group>";
-		};
 		0CDBF2AA2F45B3F600773DC7 /* KociApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KociApp;
@@ -38,7 +33,6 @@
 			isa = PBXGroup;
 			children = (
 				0CDBF2AA2F45B3F600773DC7 /* KociApp */,
-				0C65502A2F4E149B004752EC /* Services */,
 				0CDBF2A92F45B3F600773DC7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -67,7 +61,6 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0C65502A2F4E149B004752EC /* Services */,
 				0CDBF2AA2F45B3F600773DC7 /* KociApp */,
 			);
 			name = KociApp;
