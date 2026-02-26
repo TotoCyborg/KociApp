@@ -18,7 +18,10 @@ struct DispensaView: View {
     @State private var isScannerShowing = false
     @State private var showDuplicateAlert = false
     
+    // 🚀 Variabili per OCR
     @State private var isOCRScannerShowing = false
+    
+    // 🚀 salviamo l'ID unico della specifica card, non più il codice a barre
     @State private var idUltimoScansionato: ScannedItem.ID? = nil
     
     @State private var mostraContoAllaRovescia = false
@@ -164,8 +167,10 @@ struct DispensaView: View {
                     }
                     .onDelete(perform: deleteItems)
                 }
+                
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                .padding(.horizontal, 24)
                 .padding(.bottom, 20)
             }
         }
@@ -179,8 +184,11 @@ struct DispensaView: View {
                 pulisciScadutiVecchi() // 🚀 Pulisce quando riapri l'app
             }
         }
+        
+        // --- 1° SCANNER: CODICE A BARRE ---
         .sheet(isPresented: $isScannerShowing) {
             ZStack(alignment: .bottom) {
+                // 1. Lo scanner del codice a barre
                 BarcodeScanner(onScan: { code in
                     isScannerShowing = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -189,22 +197,29 @@ struct DispensaView: View {
                 })
                 .ignoresSafeArea()
                 
+                // 2. La scritta galleggiante per il Barcode
                 Text("Inquadra il codice a barre")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 2)
                     .padding(.bottom, 10)
             }
+            // Impostazioni della finestra (metà schermo + stanghetta)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        
+        // --- 2° SCANNER: OCR ---
         .sheet(isPresented: $isOCRScannerShowing) {
             ZStack(alignment: .bottom) {
+                
+                // 2. Lo scanner dell'OCR
                 OCRScanner(onScan: { dataTrovata in
                     aggiungiDataAlProdotto(data: dataTrovata)
                 })
                 .ignoresSafeArea()
                 
+                // 2. La scritta galleggiante per l'OCR
                 Text("Inquadra la data di scadenza")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
@@ -289,6 +304,7 @@ struct DispensaView: View {
         let calendario = Calendar.current
         let dataNormalizzata = calendario.startOfDay(for: data)
         
+        // 🚀 Esiste già una card diversa da questa con LO STESSO BARCODE e LA STESSA DATA?
         if let indexEsistente = scannedItems.firstIndex(where: {
             $0.id != id &&
             $0.barcode == barcodeScansionato &&
@@ -311,19 +327,51 @@ struct DispensaView: View {
         idUltimoScansionato = nil
     }
     
-    // MARK: - FUNZIONE ELIMINAZIONE MANUALE
-    func deleteItems(at offsets: IndexSet) {
-        let idsToDelete = offsets.map { articoliFiltrati[$0].id }
-        for id in idsToDelete {
-            NotificationManager.shared.cancellaNotifica(id: id)
-            scannedItems.removeAll(where: { item in
-                idsToDelete.contains(item.id)
-            })
+    // MARK: - FUNZIONE ELIMINAZIONE
+        func deleteItems(at offsets: IndexSet) {
+            let idsToDelete = offsets.map { articoliFiltrati[$0].id }
+            
+            // 1. Apriamo i cassetti dello storico
+            var salvati = DataManager.loadSalvati()
+            var scaduti = DataManager.loadScaduti()
+            
+            // 2. Isoliamo i cibi da spostare
+            let cibiDaEliminare = scannedItems.filter { idsToDelete.contains($0.id) }
+            
+            for cibo in cibiDaEliminare {
+                // Spegniamo la notifica (commentata per il test)
+                // NotificationManager.shared.cancellaNotifica(id: cibo.id)
+                
+                // 🚀 SMISTAMENTO
+                if let dataScadenza = cibo.expiryDate {
+                    let oggi = Calendar.current.startOfDay(for: Date())
+                    let scadenza = Calendar.current.startOfDay(for: dataScadenza)
+                    
+                    if scadenza < oggi {
+                        scaduti.append(cibo)
+                        print("🍎 SPOSTATO NEGLI SCADUTI: \(cibo.product?.productName ?? "Sconosciuto")")
+                    } else {
+                        salvati.append(cibo)
+                        print("🍏 SPOSTATO NEI SALVATI: \(cibo.product?.productName ?? "Sconosciuto")")
+                    }
+                } else {
+                    salvati.append(cibo)
+                    print("🍏 SPOSTATO NEI SALVATI (Senza data): \(cibo.product?.productName ?? "Sconosciuto")")
+                }
+            }
+            
+            // 3. Salviamo le modifiche
+            DataManager.saveSalvati(salvati)
+            DataManager.saveScaduti(scaduti)
+            print("💾 File json aggiornati! Totale salvati: \(salvati.count), Totale scaduti: \(scaduti.count)")
+            
+            // 4. Rimuoviamo dalla Dispensa
+            scannedItems.removeAll(where: { idsToDelete.contains($0.id) })
             DataManager.saveItems(scannedItems)
         }
+    
+    
+}
+    #Preview {
+        DispensaView()
     }
-}
-
-#Preview {
-    DispensaView()
-}
