@@ -24,10 +24,11 @@ struct DispensaView: View {
     // 🚀 salviamo l'ID unico della specifica card, non più il codice a barre
     @State private var idUltimoScansionato: ScannedItem.ID? = nil
     
-    // Interruttore per cambiare la vista della data
     @State private var mostraContoAllaRovescia = false
     
-    // FILTRO E ORDINAMENTO
+    // 🚀 ASCOLTIAMO L'APP PER PULIRE I VECCHI SCADUTI QUANDO SI RIAPRE
+    @Environment(\.scenePhase) var scenePhase
+    
     var articoliFiltrati: [ScannedItem] {
         let filtrati = testoRicerca.isEmpty ? scannedItems : scannedItems.filter { item in
             let nome = item.product?.productName ?? "Sconosciuto"
@@ -138,7 +139,10 @@ struct DispensaView: View {
                             scadenza: testoScadenza,
                             coloreBadge: coloreScadenza,
                             eScaduto: isExpired,
-                            mostraTastini: true,
+                            
+                            // 🚀 MAGIA: I tastini scompaiono se il prodotto è scaduto!
+                            mostraTastini: !isExpired,
+                            
                             quantita: articolo.quantity,
                             aumentaQuantita: {
                                 if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
@@ -172,6 +176,13 @@ struct DispensaView: View {
         }
         .onAppear {
             scannedItems = DataManager.loadItems()
+            pulisciScadutiVecchi() // 🚀 Pulisce all'avvio
+        }
+        .onChange(of: scenePhase) { nuovaFase in
+            if nuovaFase == .active {
+                scannedItems = DataManager.loadItems()
+                pulisciScadutiVecchi() // 🚀 Pulisce quando riapri l'app
+            }
         }
         
         // --- 1° SCANNER: CODICE A BARRE ---
@@ -220,20 +231,40 @@ struct DispensaView: View {
         }
     }
     
+    // MARK: - FUNZIONE DI PULIZIA AUTOMATICA
+    func pulisciScadutiVecchi() {
+        let calendario = Calendar.current
+        let oggi = calendario.startOfDay(for: Date())
+        var haCancellatoQualcosa = false
+        
+        scannedItems.removeAll { articolo in
+            guard let data = articolo.expiryDate else { return false }
+            let giorni = calendario.dateComponents([.day], from: oggi, to: calendario.startOfDay(for: data)).day ?? 0
+            
+            // 🚀 Se è scaduto da PIÙ di 1 giorno, eliminalo fisicamente
+            if giorni < -1 {
+                NotificationManager.shared.cancellaNotifica(id: articolo.id)
+                haCancellatoQualcosa = true
+                return true
+            }
+            return false
+        }
+        
+        if haCancellatoQualcosa {
+            DataManager.saveItems(scannedItems)
+        }
+    }
+    
     // MARK: - MOTORE SCANNER E RETE
     func addProduct(code: String) {
-        
-        // 1. Controlliamo se in dispensa abbiamo già questo prodotto per copiare il nome velocemente senza usare internet
         let prodottoConosciuto = scannedItems.first(where: { $0.barcode == code })?.product
         
-        // 2. Creiamo SEMPRE una nuova card (quantità 1) e ce la salviamo temporaneamente
         let newItem = ScannedItem(barcode: code, product: prodottoConosciuto, isLoading: prodottoConosciuto == nil)
         idUltimoScansionato = newItem.id
         
         withAnimation { scannedItems.insert(newItem, at: 0) }
         DataManager.saveItems(scannedItems)
         
-        // 3. Se NON conoscevamo il prodotto, cerchiamolo su internet
         if prodottoConosciuto == nil {
             Task {
                 do {
@@ -257,14 +288,12 @@ struct DispensaView: View {
                 }
             }
         } else {
-            // Se lo conoscevamo già, passiamo direttamente alla data!
             isOCRScannerShowing = true
         }
     }
     
     // MARK: - MOTORE OCR (MERGE INTELLIGENTE PER DATA)
     func aggiungiDataAlProdotto(data: Date) {
-        // Troviamo la card temporanea che abbiamo appena creato
         guard let id = idUltimoScansionato,
               let indexNuovo = scannedItems.firstIndex(where: { $0.id == id }) else {
             isOCRScannerShowing = false
@@ -273,23 +302,20 @@ struct DispensaView: View {
         
         let barcodeScansionato = scannedItems[indexNuovo].barcode
         let calendario = Calendar.current
-        let dataNormalizzata = calendario.startOfDay(for: data) // Togliamo ore e minuti per confrontare solo i giorni
+        let dataNormalizzata = calendario.startOfDay(for: data)
         
         // 🚀 Esiste già una card diversa da questa con LO STESSO BARCODE e LA STESSA DATA?
         if let indexEsistente = scannedItems.firstIndex(where: {
-            $0.id != id && // Ignoriamo quella appena creata
+            $0.id != id &&
             $0.barcode == barcodeScansionato &&
             $0.expiryDate.map({ calendario.startOfDay(for: $0) }) == dataNormalizzata
         }) {
-            // MERGE: Cancelliamo la card nuova e facciamo +1 a quella vecchia!
             withAnimation {
                 scannedItems[indexEsistente].quantity += 1
                 scannedItems.remove(at: indexNuovo)
             }
             NotificationManager.shared.programmaNotifica(per: scannedItems[indexEsistente])
-            
         } else {
-            // NESSUN DOPPIONE: La nuova card tiene la sua data e vive da sola
             withAnimation {
                 scannedItems[indexNuovo].expiryDate = data
             }
