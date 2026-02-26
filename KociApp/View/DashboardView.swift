@@ -4,6 +4,7 @@
 //
 //  Created by elio koci on 20/02/26.
 //
+
 import SwiftUI
 
 struct DashboardView: View {
@@ -12,22 +13,52 @@ struct DashboardView: View {
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     let terracottaChiaro = Color(red: 0.73, green: 0.55, blue: 0.49)
-    let rossoOggi = Color(red: 0.71, green: 0.47, blue: 0.45)
     
     @State private var mostraSoloInScadenza = true
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
     
-    // 1. RIMOSSI I MOCK DATA E AGGIUNTO IL COLLEGAMENTO AI DATI REALI
     @State private var scannedItems: [ScannedItem] = []
     
-    // 2. AGGIORNATO IL FILTRO PER LEGGERE GLI SCANNED ITEMS
+    // 🚀 FILTRO INTELLIGENTE E ORDINAMENTO
     var alimentiMostrati: [ScannedItem] {
-        if mostraSoloInScadenza {
-            // TODO: Qui andrà inserito il filtro del tuo collega per la data di scadenza.
-            // Per ora mostriamo tutto, così l'app non si rompe.
-            return scannedItems
-        } else {
-            return scannedItems
+        let filtrati = scannedItems.filter { articolo in
+            
+            // Se il prodotto ha una data di scadenza...
+            if let dataTrovata = articolo.expiryDate {
+                let calendario = Calendar.current
+                let oggi = calendario.startOfDay(for: Date())
+                let giornoScadenza = calendario.startOfDay(for: dataTrovata)
+                let componenti = calendario.dateComponents([.day], from: oggi, to: giornoScadenza)
+                let giorniRimasti = componenti.day ?? 0
+                
+                // 1. Se è GIA' SCADUTO (< 0 giorni), non lo mostriamo
+                if giorniRimasti < 0 {
+                    return false
+                }
+                
+                // 2. Filtro "Expiring"
+                if mostraSoloInScadenza {
+                    return giorniRimasti <= 7
+                }
+                
+                // 3. Filtro "All"
+                return true
+                
+            } else {
+                return !mostraSoloInScadenza
+            }
+        }
+        
+        // 🚀 ORDINAMENTO: I prodotti che scadono prima vanno in cima!
+        return filtrati.sorted { (item1, item2) -> Bool in
+            if let date1 = item1.expiryDate, let date2 = item2.expiryDate {
+                return date1 < date2 // Se entrambi hanno la data, vince chi scade prima
+            } else if item1.expiryDate != nil {
+                return true  // Se solo item1 ha la data, vince lui e va sopra
+            } else if item2.expiryDate != nil {
+                return false // Se solo item2 ha la data, vince lui
+            }
+            return false // Se nessuno dei due ha la data, restano dove sono
         }
     }
 
@@ -45,7 +76,6 @@ struct DashboardView: View {
                             .foregroundColor(grigioScuroTesto)
                         Spacer()
                         
-                        // NOTA: Assicurati di avere una "ImpostazioniView", altrimenti darà errore.
                         NavigationLink(destination: Text("Impostazioni (In arrivo)")) {
                             Circle().fill(terracottaChiaro).frame(width: 48, height: 48)
                                 .overlay(
@@ -85,7 +115,6 @@ struct DashboardView: View {
                                     }
                                 }.frame(height: 8)
                                 
-                                // TODO: Potremo rendere questo numero dinamico in seguito!
                                 Text("8 out of 10 items saved")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.gray)
@@ -120,7 +149,6 @@ struct DashboardView: View {
                                 ZStack {
                                     Circle().stroke(verdeSalvia, lineWidth: 28).frame(width: 200, height: 200)
                                     VStack(spacing: -2) {
-                                        // 3. IL CONTATORE ORA LEGGE I DATI REALI
                                         Text("\(alimentiMostrati.count)")
                                             .font(.system(size: 54, weight: .bold, design: .rounded))
                                             .foregroundColor(verdeSalvia)
@@ -141,13 +169,48 @@ struct DashboardView: View {
                             
                             // card
                             VStack(spacing: 12) {
-                                // 4. ESTRAIAMO I DATI DAGLI SCANNED ITEMS
                                 ForEach(alimentiMostrati) { articolo in
-                                    DashboardCardView(
-                                        nome: articolo.isLoading ? "Caricamento..." : (articolo.product?.productName ?? "Sconosciuto"),
-                                        dettaglio: articolo.isLoading ? "Attendere prego" : "\(articolo.quantity) pz • \(articolo.product?.brands ?? "Marca ignota")",
-                                        badgeText: "In Dispensa", // Temporaneo fino al merge del collega
-                                        badgeColor: verdeSalvia // Temporaneo fino al merge del collega
+                                    
+                                    // 1. Calcoliamo i giorni di differenza
+                                    let giorniRimasti: Int? = {
+                                        guard let dataTrovata = articolo.expiryDate else { return nil }
+                                        let calendario = Calendar.current
+                                        let oggi = calendario.startOfDay(for: Date())
+                                        let giornoScadenza = calendario.startOfDay(for: dataTrovata)
+                                        return calendario.dateComponents([.day], from: oggi, to: giornoScadenza).day
+                                    }()
+                                    
+                                    // 2. Testo in stile conto alla rovescia
+                                    let testoScadenza: String = {
+                                        if let giorni = giorniRimasti {
+                                            if giorni < 0 {
+                                                return "Expired"
+                                            } else if giorni == 0 {
+                                                return "Today"
+                                            } else if giorni == 1 {
+                                                return "Tomorrow"
+                                            } else {
+                                                return "-\(giorni)"
+                                            }
+                                        }
+                                        return "No Date"
+                                    }()
+                                    
+                                    // 3. Assegniamo il colore
+                                    let coloreScadenza: Color = {
+                                        if let giorni = giorniRimasti {
+                                            return giorni <= 7 ? terracottaChiaro : verdeSalvia
+                                        }
+                                        return verdeSalvia
+                                    }()
+                                    
+                                    // COMPONENTE CONDIVISO
+                                    AlimentoCardView(
+                                        nome: articolo.isLoading ? "Loading..." : (articolo.product?.productName ?? "Unknown"),
+                                        dettaglio: articolo.isLoading ? "Please wait" : "\(articolo.quantity) pcs • \(articolo.product?.brands ?? "Unknown")",
+                                        scadenza: testoScadenza,
+                                        coloreBadge: coloreScadenza,
+                                        mostraTastini: false
                                     )
                                 }
                             }
@@ -155,10 +218,9 @@ struct DashboardView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 40)
                     }
-                    .scrollIndicators(.hidden) // Opzionale: nasconde la barra di scorrimento laterale
+                    .scrollIndicators(.hidden)
                 }
             }
-            // 5. CARICHIAMO I DATI QUANDO LA SCHERMATA APPARE
             .onAppear {
                 scannedItems = DataManager.loadItems()
             }
@@ -166,61 +228,6 @@ struct DashboardView: View {
     }
 }
 
-// supporto
-// supporto
-struct DashboardCardView: View {
-    var nome, dettaglio, badgeText: String
-    var badgeColor: Color
-    
-    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
-    let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            
-            // Icona (Allineata alle dimensioni esatte della Dispensa: 50x50)
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(verdeSalvia.opacity(0.15))
-                
-                Image(systemName: "fork.knife")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(verdeSalvia)
-            }
-            .frame(width: 50, height: 50)
-            
-            // Testi
-            VStack(alignment: .leading, spacing: 4) {
-                Text(nome)
-                    .font(.system(size: 16, weight: .bold)) // Font a 16 come in Dispensa
-                    .foregroundColor(grigioScuroTesto)
-                    .lineLimit(1)
-                
-                Text(dettaglio)
-                    .font(.system(size: 13, weight: .medium)) // Aggiunto weight .medium
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            // Badge Scadenza ESATTAMENTE identico alla Dispensa
-            VStack(alignment: .trailing) {
-                Text(badgeText)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(badgeColor)
-                    .cornerRadius(12)
-            }
-        }
-        .padding() // Usa il padding standard come in Dispensa
-        .background(Color.white)
-        .cornerRadius(20) // Corner radius a 20 anziché 24
-        .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
-    }
-}
 #Preview {
     DashboardView()
 }

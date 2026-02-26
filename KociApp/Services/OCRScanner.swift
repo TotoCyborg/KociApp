@@ -66,7 +66,7 @@ struct OCRScanner: UIViewControllerRepresentable {
             }
         }
         
-        // IL NOSTRO SUPER-BUTTAFUORI (Filtra date false e numeri)
+        // funzione che Filtra date false e numeri
         private func analizzaTesto(_ testo: String) {
             var testoDaAnalizzare = testo
             
@@ -94,7 +94,7 @@ struct OCRScanner: UIViewControllerRepresentable {
                         if let range = Range(match.range, in: testoDaAnalizzare) {
                             let parolaTrovata = String(testoDaAnalizzare[range]).lowercased()
                             
-                            // Blacklist
+                            // Blacklist (parole che non deve riconoscere)
                             if parolaTrovata.contains("oggi") || parolaTrovata.contains("domani") || parolaTrovata.contains("ieri") {
                                 continue
                             }
