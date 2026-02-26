@@ -23,7 +23,7 @@ struct DispensaView: View {
     @State private var isScannerShowing = false
     @State private var showDuplicateAlert = false
     
-    // 🚀 NOVITÀ: Variabili per la staffetta OCR
+    // 🚀 Variabili per OCR
     @State private var isOCRScannerShowing = false
     @State private var ultimoCodiceScansionato: String = ""
     
@@ -89,7 +89,7 @@ struct DispensaView: View {
                 List {
                     ForEach(articoliFiltrati) { articolo in
                         
-                        // 🚀 NOVITÀ: Creiamo un formattatore date rapido per mostrare la data trovata
+                        // 🚀 Creiamo un formattatore date rapido per mostrare la data trovata
                         let dataFormat: String = {
                             if let dataTrovata = articolo.expiryDate {
                                 let f = DateFormatter()
@@ -99,12 +99,12 @@ struct DispensaView: View {
                             return "Senza Data"
                         }()
                         
-                        // Passaggio dei dati veri
+                        // Passaggio dei dati
                         DispensaCardView(
                             nome: articolo.isLoading ? "Ricerca in corso..." : (articolo.product?.productName ?? "Sconosciuto"),
                             dettaglio: articolo.isLoading ? "Attendere prego" : "\(articolo.quantity) pz • \(articolo.product?.brands ?? "Marca ignota")",
                             
-                            // 🚀 NOVITÀ: Mostriamo la data vera!
+                            // 🚀 Mostriamo la data vera!
                             scadenza: dataFormat,
                             coloreBadge: verdeSalvia,
                             quantita: articolo.quantity,
@@ -190,7 +190,7 @@ struct DispensaView: View {
     // MARK: - MOTORE SCANNER E RETE
     func addProduct(code: String) {
         
-        // 🚀 NOVITÀ: Salviamo in memoria chi stiamo per aggiornare
+        // 🚀 Salviamo in memoria chi stiamo per aggiornare
         ultimoCodiceScansionato = code
         
         // Se esiste già, aumentiamo la quantità
@@ -236,12 +236,15 @@ struct DispensaView: View {
     
     // MARK: - MOTORE OCR (SALVA LA DATA)
     func aggiungiDataAlProdotto(data: Date) {
-        // Cerca l'ultimo prodotto scansionato e gli inietta la data
+        // Cerca l'ultimo prodotto scansionato e gli attribuisce la data
         if let index = scannedItems.firstIndex(where: { $0.barcode == ultimoCodiceScansionato }) {
             withAnimation {
                 scannedItems[index].expiryDate = data
             }
             DataManager.saveItems(scannedItems)
+            
+            // 🚀 Programma la sveglia!
+            NotificationManager.shared.programmaNotifica(per: scannedItems[index])
         }
         
         // Spegne lo scanner
@@ -251,97 +254,103 @@ struct DispensaView: View {
     // MARK: - FUNZIONE ELIMINAZIONE
     func deleteItems(at offsets: IndexSet) {
         let idsToDelete = offsets.map { articoliFiltrati[$0].id }
-        scannedItems.removeAll(where: { item in
-            idsToDelete.contains(item.id)
-        })
-        DataManager.saveItems(scannedItems)
-    }
-}
-
-// MARK: - CARD ALIMENTI CON STEPPER
-struct DispensaCardView: View {
-    var nome: String
-    var dettaglio: String
-    var scadenza: String
-    var coloreBadge: Color
-    
-    var quantita: Int
-    var aumentaQuantita: () -> Void
-    var diminuisciQuantita: () -> Void
-    
-    let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
-    let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
-    
-    var body: some View {
-        HStack(spacing: 16) {
+        
+        // 🚀 Spegniamo la sveglia prima di buttare il cibo!
+        for id in idsToDelete {
+            NotificationManager.shared.cancellaNotifica(id: id)
             
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(verdeSalvia.opacity(0.15))
-                
-                Image(systemName: "fork.knife")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(verdeSalvia)
-            }
-            .frame(width: 50, height: 50)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(nome)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(grigioScuroTesto)
-                    .lineLimit(1)
-                
-                Text(dettaglio)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 12) {
-                Text(scadenza)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(coloreBadge)
-                    .cornerRadius(12)
-                
-                HStack(spacing: 8) {
-                    Button(action: diminuisciQuantita) {
-                        Image(systemName: "minus.square.fill")
-                            .font(.title3)
-                            .foregroundStyle(quantita > 1 ? verdeSalvia : .gray.opacity(0.3))
-                    }
-                    .buttonStyle(.borderless)
-                    
-                    Text("\(quantita)")
-                        .font(.headline)
-                        .frame(width: 20)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(verdeSalvia)
-                    
-                    Button(action: aumentaQuantita) {
-                        Image(systemName: "plus.square.fill")
-                            .font(.title3)
-                            .foregroundStyle(verdeSalvia)
-                    }
-                    .buttonStyle(.borderless)
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 6)
-                .background(verdeSalvia.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
+            scannedItems.removeAll(where: { item in
+                idsToDelete.contains(item.id)
+            })
+            DataManager.saveItems(scannedItems)
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
+    }
+    
+    // MARK: - CARD ALIMENTI CON STEPPER
+    struct DispensaCardView: View {
+        var nome: String
+        var dettaglio: String
+        var scadenza: String
+        var coloreBadge: Color
+        
+        var quantita: Int
+        var aumentaQuantita: () -> Void
+        var diminuisciQuantita: () -> Void
+        
+        let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
+        let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+        
+        var body: some View {
+            HStack(spacing: 16) {
+                
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(verdeSalvia.opacity(0.15))
+                    
+                    Image(systemName: "fork.knife")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(verdeSalvia)
+                }
+                .frame(width: 50, height: 50)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(nome)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(grigioScuroTesto)
+                        .lineLimit(1)
+                    
+                    Text(dettaglio)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 12) {
+                    Text(scadenza)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(coloreBadge)
+                        .cornerRadius(12)
+                    
+                    HStack(spacing: 8) {
+                        Button(action: diminuisciQuantita) {
+                            Image(systemName: "minus.square.fill")
+                                .font(.title3)
+                                .foregroundStyle(quantita > 1 ? verdeSalvia : .gray.opacity(0.3))
+                        }
+                        .buttonStyle(.borderless)
+                        
+                        Text("\(quantita)")
+                            .font(.headline)
+                            .frame(width: 20)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(verdeSalvia)
+                        
+                        Button(action: aumentaQuantita) {
+                            Image(systemName: "plus.square.fill")
+                                .font(.title3)
+                                .foregroundStyle(verdeSalvia)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .background(verdeSalvia.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+            .padding()
+            .background(Color.white)
+            .cornerRadius(20)
+            .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
+        }
     }
 }
+    #Preview {
+        DispensaView()
+    }
 
-#Preview {
-    DispensaView()
-}
