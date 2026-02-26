@@ -24,8 +24,8 @@ struct DispensaView: View {
     @State private var showDuplicateAlert = false
     
     // 🚀 NOVITÀ: Variabili per la staffetta OCR
-        @State private var isOCRScannerShowing = false
-        @State private var ultimoCodiceScansionato: String = ""
+    @State private var isOCRScannerShowing = false
+    @State private var ultimoCodiceScansionato: String = ""
     
     // match ricerca con dati reali
     var articoliFiltrati: [ScannedItem] {
@@ -87,37 +87,43 @@ struct DispensaView: View {
                 
                 // lista scroll (modificata in List per permettere lo swipe)
                 List {
-                    ForEach(articoliFiltrati) { articolo in
-                        
-                        // 🚀 NOVITÀ: Creiamo un formattatore date rapido per mostrare la data trovata
-                                                let dataFormat: String = {
-                                                    if let dataTrovata = articolo.expiryDate {
-                                                        let f = DateFormatter()
-                                                        f.dateStyle = .short
-                                                        return f.string(from: dataTrovata)
-                                                    }
-                                                    return "Senza Data"
-                                                }()
-                        
-                        // Passaggio dei dati veri alla tua grafica intatta
+                    // Passaggio dei dati alla grafica
+                    ForEach(articoliFiltrati, id: \.id) { articolo in
                         DispensaCardView(
                             nome: articolo.isLoading ? "Ricerca in corso..." : (articolo.product?.productName ?? "Sconosciuto"),
                             dettaglio: articolo.isLoading ? "Attendere prego" : "\(articolo.quantity) pz • \(articolo.product?.brands ?? "Marca ignota")",
                             
-                            // 🚀 NOVITÀ: Mostriamo la data vera invece di un testo fisso!
-                                                        scadenza: dataFormat,
-                                                        coloreBadge: verdeSalvia
+                            // 🚀 Mostriamo la data
+                            scadenza: formattaData(data: articolo.expiryDate),
+                            coloreBadge: verdeSalvia,
+                            
+                            quantita: articolo.quantity,
+                            aumentaQuantita: {
+                                if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
+                                    scannedItems[index].quantity += 1
+                                    DataManager.saveItems(scannedItems)
+                                }
+                            },
+                            diminuisciQuantita: {
+                                if let index = scannedItems.firstIndex(where: { $0.id == articolo.id }) {
+                                    if scannedItems[index].quantity > 1 {
+                                        scannedItems[index].quantity -= 1
+                                        DataManager.saveItems(scannedItems)
+                                    }
+                                }
+                            }
                         )
-                        // Questi modificatori nascondono lo stile di default della lista e tengono le tue spaziature
                         .listRowInsets(EdgeInsets(top: 8, leading: 24, bottom: 8, trailing: 24))
+                        // Questi modificatori nascondono lo stile di default della lista e tengono le tue spaziature
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 20)
                 }
+                
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
             }
         }
         .onAppear {
@@ -125,61 +131,61 @@ struct DispensaView: View {
         }
         
         // --- 1° SCANNER: CODICE A BARRE ---
-                .sheet(isPresented: $isScannerShowing) {
-                    ZStack(alignment: .bottom) {
-                        // 1. Lo scanner del codice a barre
-                        BarcodeScanner(onScan: { code in
-                            isScannerShowing = false // Spegne il primo scanner...
-                            
-                            // Aspetta che si chiuda e lancia la staffetta
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                addProduct(code: code)
-                            }
-                        })
-                        .ignoresSafeArea()
-                        
-                        // 2. La scritta galleggiante per il Barcode
-                        Text("Inquadra il codice a barre")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 2)
-                            .padding(.bottom, 10) // Distanza dal bordo inferiore
+        .sheet(isPresented: $isScannerShowing) {
+            ZStack(alignment: .bottom) {
+                // 1. Lo scanner del codice a barre
+                BarcodeScanner(onScan: { code in
+                    isScannerShowing = false // Spegne il primo scanner...
+                    
+                    // Aspetta che si chiuda e lancia la staffetta
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        addProduct(code: code)
                     }
-                    // Impostazioni della finestra (metà schermo + stanghetta)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                }
+                })
+                .ignoresSafeArea()
+                
+                // 2. La scritta galleggiante per il Barcode
+                Text("Inquadra il codice a barre")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 2)
+                    .padding(.bottom, 10) // Distanza dal bordo inferiore
+            }
+            // Impostazioni della finestra (metà schermo + stanghetta)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         
         // --- 2° SCANNER: OCR ---
-           .sheet(isPresented: $isOCRScannerShowing) {
-                ZStack(alignment: .bottom) {
-                   
-                     // 2. Lo scanner dell'OCR
-                     OCRScanner(onScan: { dataTrovata in
-                        aggiungiDataAlProdotto(data: dataTrovata)
-                        })
-                    .ignoresSafeArea()
-                        
+        .sheet(isPresented: $isOCRScannerShowing) {
+            ZStack(alignment: .bottom) {
+                
+                // 2. Lo scanner dell'OCR
+                OCRScanner(onScan: { dataTrovata in
+                    aggiungiDataAlProdotto(data: dataTrovata)
+                })
+                .ignoresSafeArea()
+                
                 // 2. La scritta galleggiante per l'OCR
                 Text("Inquadra la data di scadenza")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 2) // Ombra per leggerla anche su sfondi chiari
-                .padding(.bottom, 10) // La tiene un po' sollevata dal bordo inferiore
-            
-             }
-            // Impostazioni della finestra (metà schermo + stanghetta)
-           .presentationDetents([.medium, .large])
-           .presentationDragIndicator(.visible)
-            
-                }
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 2) // Ombra per leggerla anche su sfondi chiari
+                    .padding(.bottom, 10) // La tiene un po' sollevata dal bordo inferiore
+                
             }
+            // Impostazioni della finestra (metà schermo + stanghetta)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            
+        }
+    }
     
     // MARK: - MOTORE SCANNER E RETE
     func addProduct(code: String) {
         
-        // 🚀 NOVITÀ: Salviamo in memoria chi stiamo per aggiornare
-                ultimoCodiceScansionato = code
+        // 🚀 Salviamo in memoria chi stiamo per aggiornare
+        ultimoCodiceScansionato = code
         
         // Se esiste già, aumentiamo la quantità
         if let existingIndex = scannedItems.firstIndex(where: { $0.barcode == code }) {
@@ -187,8 +193,8 @@ struct DispensaView: View {
             DataManager.saveItems(scannedItems)
             
             // 🚀 Fa partire lo scanner della data
-                        isOCRScannerShowing = true
-                        return
+            isOCRScannerShowing = true
+            return
             
         }
         
@@ -209,7 +215,7 @@ struct DispensaView: View {
                     
                     // 🚀 Appena ha finito di scaricare, fa partire lo scanner della data!
                     isOCRScannerShowing = true
-
+                    
                 }
             } catch {
                 await MainActor.run {
@@ -225,25 +231,66 @@ struct DispensaView: View {
         }
     }
     // MARK: - MOTORE OCR (SALVA LA DATA)
-        func aggiungiDataAlProdotto(data: Date) {
-                // Cerca l'ultimo prodotto scansionato e gli inietta la data
-                if let index = scannedItems.firstIndex(where: { $0.barcode == ultimoCodiceScansionato }) {
-                    scannedItems[index].expiryDate = data
-                    DataManager.saveItems(scannedItems)
-                }
-                
-                // Spegne lo scanner
-                isOCRScannerShowing = false
-            }
+    func aggiungiDataAlProdotto(data: Date) {
+        // Cerca l'ultimo prodotto scansionato e gli inietta la data
+        if let index = scannedItems.firstIndex(where: { $0.barcode == ultimoCodiceScansionato }) {
+            scannedItems[index].expiryDate = data
+            DataManager.saveItems(scannedItems)
+        }
         
+        // Spegne lo scanner
+        isOCRScannerShowing = false
+    }
+    
     // MARK: - FUNZIONE ELIMINAZIONE
     func deleteItems(at offsets: IndexSet) {
         let idsToDelete = offsets.map { articoliFiltrati[$0].id }
-        scannedItems.removeAll(where: { item in
-            idsToDelete.contains(item.id)
-        })
+        // 1. Apriamo i cassetti dello storico
+        var salvati = DataManager.loadSalvati()
+        var scaduti = DataManager.loadScaduti()
+        
+        // 2. Isoliamo i cibi che l'utente ha appena "swipato"
+        let cibiDaEliminare = scannedItems.filter { idsToDelete.contains($0.id) }
+        
+        for cibo in cibiDaEliminare {
+            // Spegniamo la sveglia della notifica!
+           //NotificationManager.shared.cancellaNotifica(id: cibo.id)
+            
+            // 🚀 SMISTAMENTO AUTOMATICO
+            if let dataScadenza = cibo.expiryDate {
+                // Calcoliamo la mezzanotte di oggi e della scadenza per evitare errori di orario
+                let oggi = Calendar.current.startOfDay(for: Date())
+                let scadenza = Calendar.current.startOfDay(for: dataScadenza)
+                
+                if scadenza < oggi {
+                    // La data di scadenza è passata: Sprecati
+                    scaduti.append(cibo)
+                } else {
+                    // Non è ancora scaduto: Salvati
+                    salvati.append(cibo)
+                }
+            } else {
+                // Se un prodotto non aveva data lo mettiamo nei Salvati
+                salvati.append(cibo)
+            }
+        }
+        
+        // 3. Salviamo le modifiche nei file dello storico
+        DataManager.saveSalvati(salvati)
+        DataManager.saveScaduti(scaduti)
+        
+        // 4. Li rimuoviamo per sempre dalla Dispensa principale
+        scannedItems.removeAll(where: { idsToDelete.contains($0.id) })
         DataManager.saveItems(scannedItems)
     }
+}
+
+// MARK: - FORMATTAZIONE DATA
+func formattaData(data: Date?) -> String {
+    guard let dataSicura = data else { return "Senza Data" }
+    let f = DateFormatter()
+    f.dateStyle = .short
+    return f.string(from: dataSicura)
 }
 
 // MARK: - CARD ALIMENTI CON STEPPER
@@ -328,8 +375,9 @@ struct DispensaCardView: View {
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
     }
+    
+    
 }
-
-#Preview {
-    DispensaView()
-}
+    #Preview {
+        DispensaView()
+    }

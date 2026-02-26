@@ -59,10 +59,10 @@ struct MainTabView: View {
                 }
             
             // 3. Shopping List (previously Lista)
-            SpesaView()
+            TrendsView()
                 .tabItem {
                     Image(systemName: "list.bullet")
-                    Text("List")
+                    Text("Trends")
                 }
         }
         .tint(verdeSalvia) // Colors the active icon in sage green

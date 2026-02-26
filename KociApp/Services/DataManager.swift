@@ -17,7 +17,7 @@ class DataManager {
         return documents.appendingPathComponent(fileName)
     }
     
-    //Write
+    // MARK: - saveItems
     static func saveItems(_ items: [ScannedItem]) {
         //if file corrupt or there's not space, gestisci errore
         do{
@@ -32,7 +32,7 @@ class DataManager {
         }
     }
     
-    //Read
+    // MARK: - loadItems
     static func loadItems() -> [ScannedItem] {
         do {
             if !FileManager.default.fileExists(atPath: fileURL.path){// se il file non esiste, hai appena installato l'applicazione
@@ -49,6 +49,39 @@ class DataManager {
             return []
         }
     }
+    
+    // MARK: - MOTORE TRENDS
+        
+        // Generatore di file
+        static func getURL(for filename: String) -> URL {
+            FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(filename)
+        }
+
+        // --- FILE: CIBI SALVATI ---
+        static func loadSalvati() -> [ScannedItem] {
+            guard let data = try? Data(contentsOf: getURL(for: "salvati.json")),
+                  let items = try? JSONDecoder().decode([ScannedItem].self, from: data) else { return [] }
+            return items
+        }
+
+        static func saveSalvati(_ items: [ScannedItem]) {
+            if let data = try? JSONEncoder().encode(items) {
+                try? data.write(to: getURL(for: "salvati.json"))
+            }
+        }
+
+        // --- FILE: CIBI SCADUTI (SPRECATI) ---
+        static func loadScaduti() -> [ScannedItem] {
+            guard let data = try? Data(contentsOf: getURL(for: "scaduti.json")),
+                  let items = try? JSONDecoder().decode([ScannedItem].self, from: data) else { return [] }
+            return items
+        }
+
+        static func saveScaduti(_ items: [ScannedItem]) {
+            if let data = try? JSONEncoder().encode(items) {
+                try? data.write(to: getURL(for: "scaduti.json"))
+            }
+        }
 }
 
 
