@@ -18,15 +18,12 @@ struct DispensaView: View {
     @State private var isScannerShowing = false
     @State private var showDuplicateAlert = false
     
-    // 🚀 Variabili per OCR
     @State private var isOCRScannerShowing = false
-    
-    // 🚀 salviamo l'ID unico della specifica card, non più il codice a barre
     @State private var idUltimoScansionato: ScannedItem.ID? = nil
     
     @State private var mostraContoAllaRovescia = false
     
-    // 🚀 ASCOLTIAMO L'APP PER PULIRE I VECCHI SCADUTI QUANDO SI RIAPRE
+    // ASCOLTIAMO L'APP PER PULIRE I VECCHI SCADUTI QUANDO SI RIAPRE
     @Environment(\.scenePhase) var scenePhase
     
     var articoliFiltrati: [ScannedItem] {
@@ -140,7 +137,7 @@ struct DispensaView: View {
                             coloreBadge: coloreScadenza,
                             eScaduto: isExpired,
                             
-                            // 🚀 MAGIA: I tastini scompaiono se il prodotto è scaduto!
+                            // I tastini scompaiono se il prodotto è scaduto!
                             mostraTastini: !isExpired,
                             
                             quantita: articolo.quantity,
@@ -167,28 +164,23 @@ struct DispensaView: View {
                     }
                     .onDelete(perform: deleteItems)
                 }
-                
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .padding(.horizontal, 24)
                 .padding(.bottom, 20)
             }
         }
         .onAppear {
             scannedItems = DataManager.loadItems()
-            pulisciScadutiVecchi() // 🚀 Pulisce all'avvio
+            pulisciScadutiVecchi()
         }
         .onChange(of: scenePhase) { nuovaFase in
             if nuovaFase == .active {
                 scannedItems = DataManager.loadItems()
-                pulisciScadutiVecchi() // 🚀 Pulisce quando riapri l'app
+                pulisciScadutiVecchi()
             }
         }
-        
-        // --- 1° SCANNER: CODICE A BARRE ---
         .sheet(isPresented: $isScannerShowing) {
             ZStack(alignment: .bottom) {
-                // 1. Lo scanner del codice a barre
                 BarcodeScanner(onScan: { code in
                     isScannerShowing = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -197,29 +189,22 @@ struct DispensaView: View {
                 })
                 .ignoresSafeArea()
                 
-                // 2. La scritta galleggiante per il Barcode
                 Text("Inquadra il codice a barre")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 2)
                     .padding(.bottom, 10)
             }
-            // Impostazioni della finestra (metà schermo + stanghetta)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
-        
-        // --- 2° SCANNER: OCR ---
         .sheet(isPresented: $isOCRScannerShowing) {
             ZStack(alignment: .bottom) {
-                
-                // 2. Lo scanner dell'OCR
                 OCRScanner(onScan: { dataTrovata in
                     aggiungiDataAlProdotto(data: dataTrovata)
                 })
                 .ignoresSafeArea()
                 
-                // 2. La scritta galleggiante per l'OCR
                 Text("Inquadra la data di scadenza")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
@@ -231,19 +216,22 @@ struct DispensaView: View {
         }
     }
     
-    // MARK: - FUNZIONE DI PULIZIA AUTOMATICA
+    // MARK: - FUNZIONE DI PULIZIA AUTOMATICA (SALVA NEGLI SPRECATI)
     func pulisciScadutiVecchi() {
         let calendario = Calendar.current
         let oggi = calendario.startOfDay(for: Date())
         var haCancellatoQualcosa = false
         
+        var scadutiCorrenti = DataManager.loadScaduti()
+        
         scannedItems.removeAll { articolo in
             guard let data = articolo.expiryDate else { return false }
             let giorni = calendario.dateComponents([.day], from: oggi, to: calendario.startOfDay(for: data)).day ?? 0
             
-            // 🚀 Se è scaduto da PIÙ di 1 giorno, eliminalo fisicamente
-            if giorni < -1 {
+            // 🚀 Se è scaduto da PIÙ di 10 giorni, eliminalo fisicamente e salvalo nei Trends
+            if giorni < -10 {
                 NotificationManager.shared.cancellaNotifica(id: articolo.id)
+                scadutiCorrenti.insert(articolo, at: 0)
                 haCancellatoQualcosa = true
                 return true
             }
@@ -252,6 +240,7 @@ struct DispensaView: View {
         
         if haCancellatoQualcosa {
             DataManager.saveItems(scannedItems)
+            DataManager.saveScaduti(scadutiCorrenti)
         }
     }
     
@@ -304,7 +293,6 @@ struct DispensaView: View {
         let calendario = Calendar.current
         let dataNormalizzata = calendario.startOfDay(for: data)
         
-        // 🚀 Esiste già una card diversa da questa con LO STESSO BARCODE e LA STESSA DATA?
         if let indexEsistente = scannedItems.firstIndex(where: {
             $0.id != id &&
             $0.barcode == barcodeScansionato &&
@@ -327,51 +315,41 @@ struct DispensaView: View {
         idUltimoScansionato = nil
     }
     
-    // MARK: - FUNZIONE ELIMINAZIONE
-        func deleteItems(at offsets: IndexSet) {
-            let idsToDelete = offsets.map { articoliFiltrati[$0].id }
+    // MARK: - FUNZIONE ELIMINAZIONE MANUALE CON SMISTAMENTO TRENDS
+    func deleteItems(at offsets: IndexSet) {
+        let idsToDelete = offsets.map { articoliFiltrati[$0].id }
+        
+        var salvatiCorrenti = DataManager.loadSalvati()
+        var scadutiCorrenti = DataManager.loadScaduti()
+        let calendario = Calendar.current
+        let oggi = calendario.startOfDay(for: Date())
+        
+        for id in idsToDelete {
+            NotificationManager.shared.cancellaNotifica(id: id)
             
-            // 1. Apriamo i cassetti dello storico
-            var salvati = DataManager.loadSalvati()
-            var scaduti = DataManager.loadScaduti()
-            
-            // 2. Isoliamo i cibi da spostare
-            let cibiDaEliminare = scannedItems.filter { idsToDelete.contains($0.id) }
-            
-            for cibo in cibiDaEliminare {
-                // Spegniamo la notifica (commentata per il test)
-                // NotificationManager.shared.cancellaNotifica(id: cibo.id)
+            if let articolo = scannedItems.first(where: { $0.id == id }) {
                 
-                // 🚀 SMISTAMENTO
-                if let dataScadenza = cibo.expiryDate {
-                    let oggi = Calendar.current.startOfDay(for: Date())
-                    let scadenza = Calendar.current.startOfDay(for: dataScadenza)
-                    
-                    if scadenza < oggi {
-                        scaduti.append(cibo)
-                        print("🍎 SPOSTATO NEGLI SCADUTI: \(cibo.product?.productName ?? "Sconosciuto")")
-                    } else {
-                        salvati.append(cibo)
-                        print("🍏 SPOSTATO NEI SALVATI: \(cibo.product?.productName ?? "Sconosciuto")")
-                    }
+                let giorniRimasti: Int = {
+                    guard let data = articolo.expiryDate else { return 1 } // Senza data diamo per scontato sia buono
+                    return calendario.dateComponents([.day], from: oggi, to: calendario.startOfDay(for: data)).day ?? 0
+                }()
+                
+                if giorniRimasti < 0 {
+                    scadutiCorrenti.insert(articolo, at: 0)
                 } else {
-                    salvati.append(cibo)
-                    print("🍏 SPOSTATO NEI SALVATI (Senza data): \(cibo.product?.productName ?? "Sconosciuto")")
+                    salvatiCorrenti.insert(articolo, at: 0)
                 }
             }
             
-            // 3. Salviamo le modifiche
-            DataManager.saveSalvati(salvati)
-            DataManager.saveScaduti(scaduti)
-            print("💾 File json aggiornati! Totale salvati: \(salvati.count), Totale scaduti: \(scaduti.count)")
-            
-            // 4. Rimuoviamo dalla Dispensa
-            scannedItems.removeAll(where: { idsToDelete.contains($0.id) })
-            DataManager.saveItems(scannedItems)
+            scannedItems.removeAll(where: { $0.id == id })
         }
-    
-    
-}
-    #Preview {
-        DispensaView()
+        
+        DataManager.saveItems(scannedItems)
+        DataManager.saveSalvati(salvatiCorrenti)
+        DataManager.saveScaduti(scadutiCorrenti)
     }
+}
+
+#Preview {
+    DispensaView()
+}

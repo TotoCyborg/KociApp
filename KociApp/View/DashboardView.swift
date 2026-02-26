@@ -65,29 +65,13 @@ struct DashboardView: View {
                 
                 VStack(alignment: .leading, spacing: 0) {
                     
-                    // header fisso
+                    // header fisso pulito (Senza icona account)
                     HStack {
                         Text(nomeUtente.isEmpty ? "Welcome!" : "Hello \(nomeUtente)!")
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundColor(grigioScuroTesto)
-                        Spacer()
                         
-                        NavigationLink(destination: Text("Impostazioni (In arrivo)")) {
-                            Circle().fill(terracottaChiaro).frame(width: 48, height: 48)
-                                .overlay(
-                                    Group {
-                                        if nomeUtente.isEmpty {
-                                            Image(systemName: "person.fill")
-                                                .font(.system(size: 20, weight: .bold))
-                                                .foregroundColor(.white)
-                                        } else {
-                                            Text(String(nomeUtente.prefix(1)).uppercased())
-                                                .font(.system(size: 20, weight: .bold))
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                )
-                        }
+                        Spacer()
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 30)
@@ -158,7 +142,6 @@ struct DashboardView: View {
                                 .padding(.top, 4)
                             }
                             .padding(.top, 20)
-                            // 🚀 (Ho tolto lo spazio enorme che prima occupavano i bottoni)
                             .padding(.bottom, 10)
 
                             // cerchio con numero di alimenti

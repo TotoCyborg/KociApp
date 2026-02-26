@@ -10,9 +10,13 @@ import SwiftUI
 struct OnboardingView: View {
     let colorPanna = Color(red: 0.96, green: 0.95, blue: 0.92)
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
+    let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     
     @State private var paginaCorrente = 0
     @Binding var onboardingCompletato: Bool
+    
+    // 🚀 MAGIA: Salviamo il nome direttamente nella memoria condivisa dell'app
+    @AppStorage("nomeSalvato") private var nomeUtente: String = ""
     
     var body: some View {
         ZStack {
@@ -36,11 +40,10 @@ struct OnboardingView: View {
                     .scaledToFit()
                     .tag(2)
             }
-            // IL TRUCCO: "never" spegne i pallini automatici di Apple che erano troppo bassi
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             .ignoresSafeArea(edges: .bottom)
             
-            // 2. IL TASTO "SALTA" FISSO (Ora scompare all'ultima slide!)
+            // 2. IL TASTO "SALTA" FISSO
             if paginaCorrente < 2 {
                 VStack {
                     HStack {
@@ -59,9 +62,9 @@ struct OnboardingView: View {
                 }
             }
             
-            // 3. I NOSTRI PALLINI E IL BOTTONE SOTTO CONTROLLO MANUALE
+            // 3. I PALLINI E I CONTROLLI DELLA SCHERMATA FINALE
             VStack {
-                Spacer() // Spinge questa roba verso il basso
+                Spacer()
                 
                 // I Pallini Personalizzati
                 HStack(spacing: 8) {
@@ -71,28 +74,45 @@ struct OnboardingView: View {
                             .frame(width: 8, height: 8)
                     }
                 }
-                // Ecco il controllo al millimetro!
-                // Se vuoi alzarli di più, aumenta il 30 (nella slide 3) o il 100 (slide 1 e 2)
-                .padding(.bottom, paginaCorrente == 2 ? 30 : 100)
+                // Alziamo i pallini nell'ultima slide per fare spazio al campo di testo
+                .padding(.bottom, paginaCorrente == 2 ? 20 : 100)
                 
-                // Il Bottone (appare solo alla fine)
+                // 🚀 COMPAIONO SOLO NELL'ULTIMA SLIDE
                 if paginaCorrente == 2 {
-                    Button(action: {
-                        onboardingCompletato = true
-                    }) {
-                        Text("Inizia ora")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
+                    VStack(spacing: 16) {
+                        
+                        // IL CAMPO DI TESTO PER IL NOME
+                        TextField("Come ti chiami?", text: $nomeUtente)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(grigioScuroTesto)
                             .padding()
-                            .background(verdeSalvia)
+                            .background(Color.white)
                             .cornerRadius(16)
+                            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                            .padding(.horizontal, 24)
+                            .submitLabel(.done) // Chiude la tastiera premendo invio
+                        
+                        // IL BOTTONE INIZIA ORA
+                        Button(action: {
+                            // Quando l'utente clicca, l'onboarding si chiude e il nome è già salvato
+                            onboardingCompletato = true
+                        }) {
+                            Text("Inizia ora")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(verdeSalvia)
+                                .cornerRadius(16)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 50)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 50)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }
+        .animation(.easeInOut, value: paginaCorrente)
     }
 }
 
