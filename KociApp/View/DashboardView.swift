@@ -13,17 +13,21 @@ struct DashboardView: View {
     let verdeSalvia = Color(red: 0.48, green: 0.59, blue: 0.49)
     let grigioScuroTesto = Color(red: 0.2, green: 0.2, blue: 0.2)
     let terracottaChiaro = Color(red: 0.73, green: 0.55, blue: 0.49)
+    let rossoOggi = Color(red: 0.71, green: 0.47, blue: 0.45)
     
-    @State private var mostraSoloInScadenza = true
     @AppStorage("nomeSalvato") private var nomeUtente: String = ""
+    
+    // VARIABILI DI MEMORIA PER LA GAMIFICATION
+    @AppStorage("currentStreak") private var currentStreak: Int = 0
+    @AppStorage("lastStreakUpdate") private var lastStreakUpdate: Double = 0
     
     @State private var scannedItems: [ScannedItem] = []
     
-    // 🚀 FILTRO INTELLIGENTE E ORDINAMENTO
+    @Environment(\.scenePhase) var scenePhase
+    
+    // FILTRO INTELLIGENTE E ORDINAMENTO (Mostra SEMPRE E SOLO quelli in scadenza entro 7 giorni)
     var alimentiMostrati: [ScannedItem] {
         let filtrati = scannedItems.filter { articolo in
-            
-            // Se il prodotto ha una data di scadenza...
             if let dataTrovata = articolo.expiryDate {
                 let calendario = Calendar.current
                 let oggi = calendario.startOfDay(for: Date())
@@ -31,34 +35,26 @@ struct DashboardView: View {
                 let componenti = calendario.dateComponents([.day], from: oggi, to: giornoScadenza)
                 let giorniRimasti = componenti.day ?? 0
                 
-                // 1. Se è GIA' SCADUTO (< 0 giorni), non lo mostriamo
-                if giorniRimasti < 0 {
-                    return false
-                }
+                // Nasconde i prodotti già scaduti (< 0)
+                if giorniRimasti < 0 { return false }
                 
-                // 2. Filtro "Expiring"
-                if mostraSoloInScadenza {
-                    return giorniRimasti <= 7
-                }
-                
-                // 3. Filtro "All"
-                return true
-                
+                // Mostra SOLO quelli che scadono entro 7 giorni
+                return giorniRimasti <= 7
             } else {
-                return !mostraSoloInScadenza
+                // Se non ha data, non è un'emergenza, quindi non lo mostriamo nella Dashboard
+                return false
             }
         }
         
-        // 🚀 ORDINAMENTO: I prodotti che scadono prima vanno in cima!
         return filtrati.sorted { (item1, item2) -> Bool in
             if let date1 = item1.expiryDate, let date2 = item2.expiryDate {
-                return date1 < date2 // Se entrambi hanno la data, vince chi scade prima
+                return date1 < date2
             } else if item1.expiryDate != nil {
-                return true  // Se solo item1 ha la data, vince lui e va sopra
+                return true
             } else if item2.expiryDate != nil {
-                return false // Se solo item2 ha la data, vince lui
+                return false
             }
-            return false // Se nessuno dei due ha la data, restano dove sono
+            return false
         }
     }
 
@@ -102,46 +98,68 @@ struct DashboardView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
                             
-                            // gamification
+                            // SEZIONE GAMIFICATION
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Weekly Challenge")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(grigioScuroTesto)
                                 
+                                let settimanaCorrente = (currentStreak == 0) ? 1 : ((currentStreak - 1) / 7) + 1
+                                let giorniNelCiclo = (currentStreak == 0) ? 0 : ((currentStreak - 1) % 7) + 1
+                                
+                                HStack {
+                                    Text("Zero Waste Streak 🔥")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(grigioScuroTesto)
+                                    
+                                    // BOTTONE MAGICO (Per testare i cicli! Rimuovere prima di pubblicare)
+                                    Button(action: {
+                                        currentStreak += 1
+                                    }) {
+                                        Image(systemName: "wand.and.stars")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(.purple)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // PILLOLA DELLA SETTIMANA
+                                    Text("Week \(settimanaCorrente)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(currentStreak > 0 ? verdeSalvia : rossoOggi)
+                                        .clipShape(Capsule())
+                                }
+                                
+                                // Barra di Progresso
                                 GeometryReader { geometry in
+                                    let progresso = CGFloat(giorniNelCiclo) / 7.0
+                                    
                                     ZStack(alignment: .leading) {
                                         RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.1)).frame(height: 8)
-                                        RoundedRectangle(cornerRadius: 6).fill(verdeSalvia).frame(width: geometry.size.width * 0.8, height: 8)
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(currentStreak > 0 ? verdeSalvia : rossoOggi)
+                                            .frame(width: geometry.size.width * (currentStreak == 0 ? 0.02 : progresso), height: 8)
+                                            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: progresso)
                                     }
                                 }.frame(height: 8)
                                 
-                                Text("8 out of 10 items saved")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.gray)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.top, 4)
+                                // I GIORNI E LA MOTIVAZIONE
+                                HStack {
+                                    Text("\(giorniNelCiclo) / 7 Days")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(currentStreak > 0 ? verdeSalvia : rossoOggi)
+                                    
+                                    Spacer()
+                                    
+                                    Text(testoMotivazionale(giorni: giorniNelCiclo))
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.top, 4)
                             }
                             .padding(.top, 20)
-                            
-                            // pills
-                            HStack(spacing: 12) {
-                                Text("Expiring")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(mostraSoloInScadenza ? .white : verdeSalvia)
-                                    .padding(.horizontal, 18).padding(.vertical, 10)
-                                    .background(mostraSoloInScadenza ? verdeSalvia : Color.white)
-                                    .cornerRadius(24)
-                                    .onTapGesture { withAnimation { mostraSoloInScadenza = true } }
-                                
-                                Text("All")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(!mostraSoloInScadenza ? .white : verdeSalvia)
-                                    .padding(.horizontal, 18).padding(.vertical, 10)
-                                    .background(!mostraSoloInScadenza ? verdeSalvia : Color.white)
-                                    .cornerRadius(24)
-                                    .onTapGesture { withAnimation { mostraSoloInScadenza = false } }
-                            }
-                            .padding(.top, 25)
+                            // 🚀 (Ho tolto lo spazio enorme che prima occupavano i bottoni)
+                            .padding(.bottom, 10)
 
                             // cerchio con numero di alimenti
                             HStack {
@@ -152,7 +170,7 @@ struct DashboardView: View {
                                         Text("\(alimentiMostrati.count)")
                                             .font(.system(size: 54, weight: .bold, design: .rounded))
                                             .foregroundColor(verdeSalvia)
-                                        Text(mostraSoloInScadenza ? "To Save" : "Total")
+                                        Text("To Save")
                                             .font(.system(size: 16, weight: .bold))
                                             .foregroundColor(verdeSalvia)
                                     }
@@ -162,7 +180,7 @@ struct DashboardView: View {
                             .padding(.vertical, 40)
                             
                             // titolo lista
-                            Text(mostraSoloInScadenza ? "Expiring soon" : "All food items")
+                            Text("Expiring soon")
                                 .font(.system(size: 20, weight: .bold))
                                 .foregroundColor(grigioScuroTesto)
                                 .padding(.bottom, 16)
@@ -171,32 +189,24 @@ struct DashboardView: View {
                             VStack(spacing: 12) {
                                 ForEach(alimentiMostrati) { articolo in
                                     
-                                    // 1. Calcoliamo i giorni di differenza
                                     let giorniRimasti: Int? = {
                                         guard let dataTrovata = articolo.expiryDate else { return nil }
                                         let calendario = Calendar.current
-                                        let oggi = calendario.startOfDay(for: Date())
-                                        let giornoScadenza = calendario.startOfDay(for: dataTrovata)
-                                        return calendario.dateComponents([.day], from: oggi, to: giornoScadenza).day
+                                        return calendario.dateComponents([.day], from: calendario.startOfDay(for: Date()), to: calendario.startOfDay(for: dataTrovata)).day
                                     }()
                                     
-                                    // 2. Testo in stile conto alla rovescia
+                                    let isExpired = (giorniRimasti != nil && giorniRimasti! < 0)
+                                    
                                     let testoScadenza: String = {
                                         if let giorni = giorniRimasti {
-                                            if giorni < 0 {
-                                                return "Expired"
-                                            } else if giorni == 0 {
-                                                return "Today"
-                                            } else if giorni == 1 {
-                                                return "Tomorrow"
-                                            } else {
-                                                return "-\(giorni)"
-                                            }
+                                            if giorni < 0 { return "Expired" }
+                                            else if giorni == 0 { return "Today" }
+                                            else if giorni == 1 { return "Tomorrow" }
+                                            else { return "-\(giorni)" }
                                         }
                                         return "No Date"
                                     }()
                                     
-                                    // 3. Assegniamo il colore
                                     let coloreScadenza: Color = {
                                         if let giorni = giorniRimasti {
                                             return giorni <= 7 ? terracottaChiaro : verdeSalvia
@@ -204,12 +214,12 @@ struct DashboardView: View {
                                         return verdeSalvia
                                     }()
                                     
-                                    // COMPONENTE CONDIVISO
                                     AlimentoCardView(
                                         nome: articolo.isLoading ? "Loading..." : (articolo.product?.productName ?? "Unknown"),
                                         dettaglio: articolo.isLoading ? "Please wait" : "\(articolo.quantity) pcs • \(articolo.product?.brands ?? "Unknown")",
                                         scadenza: testoScadenza,
                                         coloreBadge: coloreScadenza,
+                                        eScaduto: isExpired,
                                         mostraTastini: false
                                     )
                                 }
@@ -223,7 +233,55 @@ struct DashboardView: View {
             }
             .onAppear {
                 scannedItems = DataManager.loadItems()
+                aggiornaStreak()
             }
+            .onChange(of: scenePhase) { nuovaFase in
+                if nuovaFase == .active {
+                    scannedItems = DataManager.loadItems()
+                    aggiornaStreak()
+                }
+            }
+        }
+    }
+    
+    // MARK: - MOTORE DELLA GAMIFICATION
+    func aggiornaStreak() {
+        let calendario = Calendar.current
+        let oggi = calendario.startOfDay(for: Date())
+        
+        if lastStreakUpdate == 0 {
+            lastStreakUpdate = oggi.timeIntervalSince1970
+            return
+        }
+        
+        let cEQualcosaDiScaduto = scannedItems.contains { articolo in
+            guard let dataScadenza = articolo.expiryDate else { return false }
+            return calendario.startOfDay(for: dataScadenza) < oggi
+        }
+        
+        if cEQualcosaDiScaduto {
+            currentStreak = 0
+            lastStreakUpdate = oggi.timeIntervalSince1970
+        } else {
+            let ultimaData = Date(timeIntervalSince1970: lastStreakUpdate)
+            let inizioUltimaData = calendario.startOfDay(for: ultimaData)
+            
+            if let giorniPassati = calendario.dateComponents([.day], from: inizioUltimaData, to: oggi).day, giorniPassati > 0 {
+                currentStreak += giorniPassati
+                lastStreakUpdate = oggi.timeIntervalSince1970
+            }
+        }
+    }
+    
+    func testoMotivazionale(giorni: Int) -> String {
+        if currentStreak == 0 {
+            return "Oh no! Let's start over!"
+        } else if giorni == 7 {
+            return "Perfect week! 🎉"
+        } else if giorni >= 4 {
+            return "Halfway there, keep going!"
+        } else {
+            return "Great start! 👏"
         }
     }
 }
